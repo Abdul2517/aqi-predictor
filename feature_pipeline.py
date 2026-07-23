@@ -38,6 +38,7 @@ load_dotenv()  # loads .env file if present; in CI, real env vars are used inste
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 HOPSWORKS_API_KEY = os.getenv("HOPSWORKS_API_KEY")
 HOPSWORKS_PROJECT_NAME = os.getenv("HOPSWORKS_PROJECT_NAME")
+HOPSWORKS_HOST = os.getenv("HOPSWORKS_HOST", "eu-west.cloud.hopsworks.ai")
 
 CITY_NAME = os.getenv("CITY_NAME", "Rawalpindi")
 CITY_LAT = float(os.getenv("CITY_LAT", "33.5651"))
@@ -47,7 +48,10 @@ AIR_POLLUTION_URL = "http://api.openweathermap.org/data/2.5/air_pollution"
 WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
 
 FEATURE_GROUP_NAME = "aqi_features"
-FEATURE_GROUP_VERSION = 1
+FEATURE_GROUP_VERSION = 2  # bumped from 1: v1 was created with DELTA format, which fails
+                            # from external clients (GitHub Actions, local machines) because
+                            # it needs a direct RPC connection to HopsFS that external
+                            # networks can't reach. v2 uses HUDI instead (see below).
 
 
 def fetch_air_pollution(lat: float, lon: float) -> dict:
@@ -144,6 +148,10 @@ def write_to_feature_store(fs, row: dict):
         primary_key=["city"],
         event_time="event_time",
         online_enabled=True,  # lets the web app read the LATEST row fast, without a full table scan
+        time_travel_format="HUDI",  # avoids DELTA's direct-RPC-to-HopsFS requirement, which
+                                     # external clients (GitHub Actions, local dev machines)
+                                     # cannot reach; HUDI writes go through Hopsworks' REST
+                                     # ingestion service instead
     )
     fg.insert(df)
     print(f"Inserted feature row for {row['city']} at {row['event_time']}")
@@ -157,8 +165,13 @@ def main():
 
     import hopsworks  # imported here so the script still runs --help/-checks without the dep installed
 
-    print(f"Connecting to Hopsworks project '{HOPSWORKS_PROJECT_NAME}'...")
-    project = hopsworks.login(api_key_value=HOPSWORKS_API_KEY, project=HOPSWORKS_PROJECT_NAME)
+    print(f"Connecting to Hopsworks project '{HOPSWORKS_PROJECT_NAME}' on {HOPSWORKS_HOST}...")
+    project = hopsworks.login(
+        project=HOPSWORKS_PROJECT_NAME,
+        host=HOPSWORKS_HOST,
+        port=443,
+        api_key_value=HOPSWORKS_API_KEY,
+    )
     fs = project.get_feature_store()
 
     print(f"Fetching raw pollution + weather data for {CITY_NAME}...")
