@@ -48,10 +48,11 @@ AIR_POLLUTION_URL = "http://api.openweathermap.org/data/2.5/air_pollution"
 WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
 
 FEATURE_GROUP_NAME = "aqi_features"
-FEATURE_GROUP_VERSION = 2  # bumped from 1: v1 was created with DELTA format, which fails
-                            # from external clients (GitHub Actions, local machines) because
-                            # it needs a direct RPC connection to HopsFS that external
-                            # networks can't reach. v2 uses HUDI instead (see below).
+FEATURE_GROUP_VERSION = 3  # bumped from 2: v2's schema got locked in with 'no' as an
+                            # integer on its first insert, then broke on the next run
+                            # when OpenWeather returned a decimal for the same field.
+                            # v3 forces consistent float typing in fetch_air_pollution()
+                            # and fetch_weather() so this can't happen again.
 
 
 def fetch_air_pollution(lat: float, lon: float) -> dict:
@@ -61,15 +62,21 @@ def fetch_air_pollution(lat: float, lon: float) -> dict:
     resp.raise_for_status()
     data = resp.json()["list"][0]
     return {
-        "aqi": data["main"]["aqi"],
-        "co": data["components"]["co"],
-        "no": data["components"]["no"],
-        "no2": data["components"]["no2"],
-        "o3": data["components"]["o3"],
-        "so2": data["components"]["so2"],
-        "pm2_5": data["components"]["pm2_5"],
-        "pm10": data["components"]["pm10"],
-        "nh3": data["components"]["nh3"],
+        # aqi is OpenWeather's own 1-5 index, always a whole number -> keep as int
+        "aqi": int(data["main"]["aqi"]),
+        # Force every pollutant reading to float. OpenWeather sometimes returns a
+        # whole number (e.g. 0) and sometimes a decimal (e.g. 0.02) for the same
+        # field across different calls. Hopsworks locks a feature group's column
+        # type on first insert, so if the type isn't forced consistently here,
+        # a later run with a different type crashes with a schema mismatch error.
+        "co": float(data["components"]["co"]),
+        "no": float(data["components"]["no"]),
+        "no2": float(data["components"]["no2"]),
+        "o3": float(data["components"]["o3"]),
+        "so2": float(data["components"]["so2"]),
+        "pm2_5": float(data["components"]["pm2_5"]),
+        "pm10": float(data["components"]["pm10"]),
+        "nh3": float(data["components"]["nh3"]),
     }
 
 
@@ -80,11 +87,12 @@ def fetch_weather(lat: float, lon: float) -> dict:
     resp.raise_for_status()
     data = resp.json()
     return {
-        "temperature": data["main"]["temp"],
-        "humidity": data["main"]["humidity"],
-        "pressure": data["main"]["pressure"],
-        "wind_speed": data["wind"]["speed"],
-        "wind_deg": data["wind"].get("deg", 0),
+        # Same fix as above: force consistent types so the schema never breaks.
+        "temperature": float(data["main"]["temp"]),
+        "humidity": float(data["main"]["humidity"]),
+        "pressure": float(data["main"]["pressure"]),
+        "wind_speed": float(data["wind"]["speed"]),
+        "wind_deg": float(data["wind"].get("deg", 0)),
     }
 
 
