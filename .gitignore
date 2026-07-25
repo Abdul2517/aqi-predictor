@@ -3,3 +3,7 @@ venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+saved_model/
+saved_model_day1/
+saved_model_day2/
+saved_model_day3/
