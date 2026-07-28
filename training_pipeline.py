@@ -240,6 +240,29 @@ def cross_validate_models(df: pd.DataFrame, horizon_hours: int) -> dict:
     return avg_metrics
 
 
+def get_current_production_rmse(project, horizon_key: str):
+    """
+    Look up the RMSE of whatever model is CURRENTLY registered as latest for
+    this horizon, so a new candidate can be compared against it fairly.
+    Returns None if no model is registered yet (first-ever run for this
+    horizon), if its stored metrics don't include RMSE, or if anything about
+    this lookup fails for any reason -- all treated as "nothing confirmed to
+    beat yet", so a failed lookup here safely falls back to the pipeline's
+    original behavior (always register) rather than crashing the automation.
+    """
+    try:
+        mr = project.get_model_registry()
+        registry_name = MODEL_REGISTRY_NAME_TEMPLATE.format(horizon_key=horizon_key)
+        model_meta = mr.get_model(registry_name)
+        metrics = getattr(model_meta, "training_metrics", None) or getattr(model_meta, "metrics", None)
+        if metrics and "rmse" in metrics:
+            return float(metrics["rmse"])
+    except Exception as e:
+        print(f"  (Could not look up current production metrics for {horizon_key}: {e}. "
+              f"Proceeding as if no prior model exists.)")
+    return None
+
+
 def train_and_register_horizon(project, fs, df_with_lags: pd.DataFrame, horizon_key: str, horizon_hours: int):
     print(f"\n{'=' * 70}")
     print(f"HORIZON: {horizon_key} ({horizon_hours}h ahead)")
@@ -264,6 +287,24 @@ def train_and_register_horizon(project, fs, df_with_lags: pd.DataFrame, horizon_
     best_metrics = avg_metrics[best_name]
     print(f"\n  Best model for {horizon_key}: {best_name} "
           f"(avg RMSE={best_metrics['rmse']:.3f}, MAE={best_metrics['mae']:.3f}, R2={best_metrics['r2']:.3f})")
+
+    # WHY this check exists: without it, this daily automated run would
+    # ALWAYS overwrite the registered model regardless of whether today's
+    # cross-validation happened to land on a worse candidate by chance --
+    # cross-validated scores have some run-to-run noise, so an unlucky day
+    # could silently downgrade production. Comparing against whatever is
+    # CURRENTLY deployed (and only replacing it on a genuine improvement)
+    # protects against that.
+    current_rmse = get_current_production_rmse(project, horizon_key)
+    if current_rmse is not None and best_metrics["rmse"] >= current_rmse:
+        print(f"  No improvement for {horizon_key}: today's best ({best_metrics['rmse']:.3f} RMSE) "
+              f"does not beat the current production model ({current_rmse:.3f} RMSE). "
+              f"Keeping the existing deployed model -- not registering.")
+        return
+    if current_rmse is not None:
+        print(f"  IMPROVEMENT: {best_metrics['rmse']:.3f} < current production {current_rmse:.3f}. Proceeding.")
+    else:
+        print(f"  No existing production model found for {horizon_key} -- registering this as the first one.")
 
     print(f"  Retraining {best_name} on the FULL dataset for deployment...")
     X_all_raw = df[FEATURE_COLUMNS]
