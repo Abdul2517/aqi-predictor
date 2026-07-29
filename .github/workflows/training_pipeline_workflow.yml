@@ -1,15 +1,8 @@
 name: Training Pipeline
 
-# WHY these triggers:
-#   - schedule: runs automatically once a day, as required by the project spec
-#     ("the training script every day"). 2 AM UTC is arbitrary but deliberately
-#     NOT midnight, to avoid the common pile-up of jobs many repos schedule
-#     right at 00:00.
-#   - workflow_dispatch: lets you manually trigger a run from the GitHub UI,
-#     useful for testing without waiting for the schedule.
 on:
   schedule:
-    - cron: "0 2 * * *"   # once a day, 02:00 UTC
+    - cron: "0 2 * * *"
   workflow_dispatch: {}
 
 jobs:
@@ -30,9 +23,6 @@ jobs:
 
       - name: Run training pipeline
         env:
-          # Training only reads from Hopsworks (no OpenWeather calls needed),
-          # so it reuses the same secrets already configured for the feature
-          # pipeline -- no new secrets needed.
           HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
           HOPSWORKS_PROJECT_NAME: ${{ secrets.HOPSWORKS_PROJECT_NAME }}
           HOPSWORKS_HOST: ${{ secrets.HOPSWORKS_HOST }}
