@@ -1,44 +1,3 @@
-"""
-train_lstm.py
---------------
-Experimental extension to Phase D: tries an LSTM (sequence model) per
-horizon, as a genuinely different approach from the tabular models in
-training_pipeline.py.
-
-WHY an LSTM specifically:
-    The tabular models (Ridge/RF/GB/NN) see one row per prediction: the
-    CURRENT conditions plus a couple of hand-picked lag features (24h ago,
-    48h ago, a rolling average). An LSTM instead sees the full raw sequence
-    of the last WINDOW_HOURS hours directly, timestep by timestep, and can
-    learn its own notion of "recent trend" rather than relying on the two
-    or three summary numbers we chose by hand. This is a fundamentally
-    different way of representing the problem, not just "another model
-    type" -- worth trying since 4 diverse tabular model types all converged
-    to similarly weak results (a sign the bottleneck may be the FEATURE
-    REPRESENTATION, not the model class).
-
-WHY this only registers a new model if it actually wins:
-    This script re-computes a fair tabular baseline (Ridge + Gradient
-    Boosting, the two strongest performers so far) on the EXACT SAME data
-    the LSTM sees, using the same number of CV folds -- so the comparison
-    is apples-to-apples. Only if the LSTM's average RMSE beats the best
-    tabular RMSE for a given horizon does it get registered (as a new
-    version under the same Hopsworks model name) -- we never want to
-    replace a working, decent model with a worse experimental one.
-
-WHY only 3 CV folds here (main pipeline uses 5):
-    LSTM training is much slower than Ridge/GB. 3 folds keeps total runtime
-    reasonable while still testing across different time periods/seasons,
-    at some cost to how robust the average is. The OFFICIAL registered
-    tabular metrics remain whatever training_pipeline.py's 5-fold run
-    produced -- this script's own tabular re-check exists only for a fair
-    LSTM comparison, not to replace that.
-
-Run manually (after backfill_pipeline.py and training_pipeline.py have
-both been run on the full expanded dataset):
-    python train_lstm.py
-"""
-
 import os
 
 import joblib
@@ -66,14 +25,9 @@ from training_pipeline import (
     train_ridge,
 )
 
-N_CV_FOLDS = 3  # fewer than the main pipeline's 5, to keep LSTM runtime reasonable
-WINDOW_HOURS = 48  # how much recent history the LSTM sees per prediction
+N_CV_FOLDS = 3
+WINDOW_HOURS = 48
 
-# Raw per-timestep features the LSTM sees across the sequence window.
-# Unlike the tabular models, we don't hand-craft lag/rolling features here --
-# the LSTM sees the raw sequence and can learn its own trend patterns.
-# hour_sin/hour_cos encode time-of-day cyclically (so hour 23 and hour 0 are
-# recognized as close together, unlike raw 0-23 which treats them as far apart).
 SEQ_FEATURE_COLUMNS = [
     "aqi", "co", "no", "no2", "o3", "so2", "pm2_5", "pm10", "nh3",
     "temperature", "humidity", "pressure", "wind_speed", "wind_deg",
@@ -89,12 +43,6 @@ def add_cyclical_hour(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_sequences(df: pd.DataFrame, horizon_hours: int, window: int = WINDOW_HOURS):
-    """
-    For each valid position i, X = the last `window` hours of raw features
-    ending at i, y = pm2_5 exactly `horizon_hours` after i. Positions too
-    close to the start (no full window yet) or end (no future target yet)
-    are skipped.
-    """
     df = df.sort_values("event_time").reset_index(drop=True)
     feature_values = df[SEQ_FEATURE_COLUMNS].values.astype("float32")
     target_values = df[SOURCE_COLUMN_FOR_TARGET].values.astype("float32")
@@ -131,8 +79,6 @@ def train_lstm(X_train, y_train, X_val=None, y_val=None, epochs=30):
 
 
 def scale_sequences(X_train, X_test, scaler=None):
-    """Fit (or reuse) a StandardScaler across all timesteps/features, then
-    reshape back to 3D. Fitting only on TRAIN avoids leaking test statistics."""
     n_features = X_train.shape[2]
     if scaler is None:
         scaler = StandardScaler()
@@ -146,8 +92,6 @@ def scale_sequences(X_train, X_test, scaler=None):
 
 
 def evaluate_tabular_baseline(df_tabular: pd.DataFrame, horizon_hours: int) -> dict:
-    """Fair re-check of Ridge + Gradient Boosting on the SAME data/folds the
-    LSTM will be compared against (see module docstring for why)."""
     X_all = df_tabular[FEATURE_COLUMNS]
     y_all_raw = df_tabular[TARGET_COLUMN].values
     y_all_log = np.log1p(y_all_raw)
@@ -224,8 +168,8 @@ def main():
     df = load_feature_data(fs)
     print(f"  -> {len(df)} raw rows loaded")
 
-    df = add_lag_features(df)       # needed for the tabular baseline re-check
-    df = add_cyclical_hour(df)      # needed for the LSTM's sequence features
+    df = add_lag_features(df)
+    df = add_cyclical_hour(df)
 
     for horizon_key, horizon_hours in HORIZONS.items():
         print(f"\n{'=' * 70}")

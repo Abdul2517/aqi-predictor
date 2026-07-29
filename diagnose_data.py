@@ -1,14 +1,3 @@
-"""
-diagnose_data.py
------------------
-Quick one-off diagnostic -- NOT part of the pipeline. Checks whether the
-stored AQI data actually has enough variation to be predictable at all,
-before we spend more time tuning models.
-
-Run manually:
-    python diagnose_data.py
-"""
-
 import os
 
 import pandas as pd
@@ -58,8 +47,6 @@ def main():
     corr2 = df[["pm2_5", "pm2_5_72h_later"]].corr().iloc[0, 1]
     print(f"Correlation: {corr2:.3f}")
 
-    # Check the most recent 15% (our test set) vs the rest, since a big
-    # difference here would explain poor test performance on its own.
     split_index = int(len(df) * 0.85)
     train_part = df.iloc[:split_index]
     test_part = df.iloc[split_index:]

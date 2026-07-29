@@ -1,25 +1,3 @@
-"""
-diagnose_horizon.py
----------------------
-Quick standalone diagnostic -- NOT part of the deployed pipeline, doesn't
-touch the Model Registry. Answers one question: is 72-hour-ahead PM2.5
-forecasting just inherently much harder than a shorter horizon (like 24h),
-or is something else going on?
-
-WHY this matters: if 24h forecasting scores meaningfully better than 72h
-using the exact same data/features/models, that's strong evidence the
-72h task is just genuinely hard for this city (a legitimate, reportable
-finding) rather than a bug in the pipeline. If 24h is ALSO poor, that
-points to something still wrong elsewhere.
-
-Uses only Ridge + Gradient Boosting (the two fastest, and GB was the best
-performer in the main pipeline) to keep runtime short -- this is a
-diagnostic, not a full model comparison.
-
-Run manually:
-    python diagnose_horizon.py
-"""
-
 import numpy as np
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler

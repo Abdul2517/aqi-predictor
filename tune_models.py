@@ -1,37 +1,3 @@
-"""
-tune_models.py
----------------
-Focused tuning pass on top of Phase D: tests better-tuned hyperparameters
-for Ridge/Random Forest/Gradient Boosting, plus a DEEPER LSTM (longer 72h
-lookback window, two stacked LSTM layers instead of one), against what's
-currently deployed for each horizon.
-
-WHY these specific changes:
-    - Ridge: only tuned alpha (0.1/1/10/50) -- Ridge's one real hyperparameter,
-      cheap to sweep.
-    - Random Forest / Gradient Boosting: one reasoned "upgraded" config each
-      (more trees/iterations, deeper, tuned learning rate) rather than a full
-      grid search, to keep total runtime manageable alongside the LSTM runs.
-    - LSTM: a deeper variant (72h window instead of 48h, two stacked LSTM
-      layers (64+32 units) instead of one, more epochs) -- more capacity and
-      more context per prediction, specifically to help Day+2/Day+3 where
-      the basic LSTM lost to Ridge previously.
-
-WHY every candidate (including ones matching current production) is
-re-tested fresh in THIS script, on the SAME folds:
-    This guarantees a fair, apples-to-apples comparison. Rather than trusting
-    stale numbers from earlier scripts (which used different fold splits),
-    every candidate -- old and new -- is scored on identical data here. The
-    overall winner per horizon is only registered as a new model version if
-    it's a genuinely NEW configuration that beats the current production
-    equivalent's freshly-recomputed score. If the current setup wins again,
-    nothing is re-registered.
-
-Run manually (after backfill_pipeline.py and training_pipeline.py have
-been run on the full dataset):
-    python tune_models.py
-"""
-
 import os
 
 import joblib
@@ -61,8 +27,6 @@ from train_lstm import SEQ_FEATURE_COLUMNS, add_cyclical_hour, build_sequences, 
 
 N_CV_FOLDS = 3
 
-# The configuration currently deployed for each horizon -- used so we know
-# what "beating production" actually means for that horizon.
 CURRENT_PRODUCTION_EQUIVALENT = {
     "day1": "lstm_w48_1layer",
     "day2": "ridge_a1",
@@ -82,7 +46,6 @@ TABULAR_CANDIDATE_BUILDERS = {
     ),
 }
 
-# window_hours, LSTM layer sizes (stacked), training epochs
 LSTM_CANDIDATE_CONFIGS = {
     "lstm_w48_1layer": {"window": 48, "layers": [32], "epochs": 30},
     "lstm_w72_2layer": {"window": 72, "layers": [64, 32], "epochs": 40},
@@ -94,7 +57,7 @@ def build_lstm(input_window, n_features, layer_units, X_train, y_train, X_val=No
 
     layers = [tf.keras.layers.Input(shape=(input_window, n_features))]
     for i, units in enumerate(layer_units):
-        return_sequences = i < len(layer_units) - 1  # only the last LSTM layer drops the sequence dim
+        return_sequences = i < len(layer_units) - 1
         layers.append(tf.keras.layers.LSTM(units, return_sequences=return_sequences))
     layers.append(tf.keras.layers.Dense(16, activation="relu"))
     layers.append(tf.keras.layers.Dense(1))

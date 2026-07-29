@@ -1,36 +1,3 @@
-"""
-app.py
--------
-STEP 4 of the AQI Predictor project (Phase F: Web App / Dashboard).
-
-WHY this design:
-    Loads the LATEST registered model for each horizon (day1/day2/day3)
-    from the Hopsworks Model Registry -- not a hardcoded specific version.
-    This matches the project's automation spirit: the daily training
-    pipeline keeps re-registering fresh models as new data comes in, so the
-    dashboard should always reflect whatever is currently "best" per the
-    automated pipeline, not a version frozen at build time.
-
-WHY it handles BOTH tabular and LSTM models:
-    Different horizons may currently be served by different model families
-    (e.g. an LSTM for day1, Ridge for day2/day3) -- and which one is "latest"
-    can change day to day as the automated pipeline retrains. Rather than
-    assuming one model type, this app reads each model's own inference_notes.txt
-    (written at training time) to know exactly how to build its input and
-    reverses the log1p transform consistently, whichever type it turns out to be.
-
-WHY it re-derives lag/rolling/cyclical features here instead of reading them
-from the feature store directly:
-    The Hopsworks feature group only stores the RAW hourly features (from
-    feature_pipeline.py) -- lag/rolling/cyclical features are engineered on
-    top of that raw history at training time, not stored as columns. So the
-    app pulls the recent raw history and recomputes those same derived
-    features the same way training did, to avoid train/serve mismatch.
-
-Run locally:
-    streamlit run app.py
-"""
-
 import ast
 import os
 
@@ -43,9 +10,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ---------------------------------------------------------------------------
-# CONFIG
-# ---------------------------------------------------------------------------
 HOPSWORKS_API_KEY = os.getenv("HOPSWORKS_API_KEY")
 HOPSWORKS_PROJECT_NAME = os.getenv("HOPSWORKS_PROJECT_NAME")
 HOPSWORKS_HOST = os.getenv("HOPSWORKS_HOST", "eu-west.cloud.hopsworks.ai")
@@ -59,8 +23,6 @@ FEATURE_GROUP_VERSION = 3
 HORIZONS = {"day1": 24, "day2": 48, "day3": 72}
 MODEL_REGISTRY_NAME_TEMPLATE = "aqi_forecast_model_{horizon_key}"
 
-# Standard US EPA AQI health guidance per category -- real, publicly documented
-# guidance, not fabricated. Used in the Health Recommendations section.
 HEALTH_GUIDANCE = {
     "Good": [
         ("\U0001F60A", "Air quality is satisfactory. Enjoy outdoor activities as normal."),
@@ -103,8 +65,6 @@ SEQ_FEATURE_COLUMNS = [
 
 MAX_PLAUSIBLE_PM2_5 = 1000.0
 
-# US EPA PM2.5 24-hour breakpoints (ug/m3) -- used for the hazard alerts and
-# color-coded categories on the dashboard.
 PM25_CATEGORIES = [
     (0, 12.0, "Good", "#22C55E"),
     (12.1, 35.4, "Moderate", "#FACC15"),
@@ -122,9 +82,6 @@ def categorize_pm25(value: float):
     return "Unknown", "#95a5a6"
 
 
-# ---------------------------------------------------------------------------
-# HOPSWORKS CONNECTION + DATA
-# ---------------------------------------------------------------------------
 @st.cache_resource
 def connect_hopsworks():
     import hopsworks
@@ -135,7 +92,7 @@ def connect_hopsworks():
     return project
 
 
-@st.cache_data(ttl=3600)  # refresh hourly -- matches how often new raw data actually arrives
+@st.cache_data(ttl=3600)
 def load_recent_features(_project) -> pd.DataFrame:
     fs = _project.get_feature_store()
     fg = fs.get_feature_group(name=FEATURE_GROUP_NAME, version=FEATURE_GROUP_VERSION)
@@ -160,9 +117,6 @@ def add_cyclical_hour(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-# ---------------------------------------------------------------------------
-# MODEL LOADING
-# ---------------------------------------------------------------------------
 def parse_inference_notes(path: str) -> dict:
     notes = {}
     with open(path) as f:
@@ -185,12 +139,6 @@ def parse_inference_notes(path: str) -> dict:
 def load_horizon_model(_project, horizon_key: str):
     mr = _project.get_model_registry()
     registry_name = MODEL_REGISTRY_NAME_TEMPLATE.format(horizon_key=horizon_key)
-    # IMPORTANT: mr.get_model(name) WITHOUT a version does not return the
-    # latest version -- it silently defaults to version 1 (the very first
-    # one ever registered), confirmed by Hopsworks' own "defaulting to 1"
-    # warning. That bug meant this dashboard could show a stale, outdated
-    # model even after better ones were registered. Fetch all versions and
-    # explicitly pick the highest one instead.
     all_versions = mr.get_models(registry_name)
     if not all_versions:
         raise RuntimeError(f"No registered model found for '{registry_name}'.")
@@ -212,10 +160,6 @@ def load_horizon_model(_project, horizon_key: str):
     else:
         model = joblib.load(os.path.join(download_dir, "model.pkl"))
 
-    # Pull the REAL cross-validated metrics that were recorded when this model
-    # was registered (see training_pipeline.py) -- used for an honest
-    # "reliability" indicator instead of a fabricated confidence score, since
-    # these are point-prediction models without calibrated uncertainty.
     stored_metrics = getattr(model_meta, "training_metrics", None) or {}
 
     return {
@@ -230,9 +174,6 @@ def load_horizon_model(_project, horizon_key: str):
     }
 
 
-# ---------------------------------------------------------------------------
-# PREDICTION
-# ---------------------------------------------------------------------------
 def predict_tabular(bundle: dict, latest_row: pd.Series) -> float:
     X = latest_row[TABULAR_FEATURE_COLUMNS].values.reshape(1, -1).astype(float)
     X_scaled = bundle["scaler"].transform(X)
@@ -258,9 +199,6 @@ def get_prediction(bundle: dict, latest_row: pd.Series, df_seq: pd.DataFrame) ->
     return predict_tabular(bundle, latest_row)
 
 
-# ---------------------------------------------------------------------------
-# UI
-# ---------------------------------------------------------------------------
 st.set_page_config(page_title=f"{CITY_NAME} AQI Forecast", page_icon="\U0001F32B\uFE0F", layout="wide")
 
 st.markdown("""
@@ -506,8 +444,6 @@ with st.spinner("Loading forecast models..."):
 average_pred = float(np.mean(list(predictions.values())))
 labels = {"day1": "Day +1 (24h)", "day2": "Day +2 (48h)", "day3": "Day +3 (72h)"}
 
-# --- Sidebar: live clock (self-contained JS, ticks locally without
-# triggering Streamlit reruns) + real system status (no fabricated values) ---
 with st.sidebar:
     st.markdown("<div class='aqi-eyebrow'>LIVE TIME</div>", unsafe_allow_html=True)
     st.components.v1.html(
@@ -561,8 +497,6 @@ worst_label, worst_color = max(
     key=lambda lc: [c[2] for c in PM25_CATEGORIES].index(lc[0]),
 )
 
-# Primary pollutant: purely descriptive (highest current raw concentration),
-# NOT a feature-importance/causal claim -- we haven't run real SHAP analysis.
 _pollutant_cols = ["pm2_5", "pm10", "co", "no", "no2", "o3", "so2", "nh3"]
 _pollutant_display = {"pm2_5": "PM2.5", "pm10": "PM10", "co": "CO", "no": "NO",
                        "no2": "NO\u2082", "o3": "O\u2083", "so2": "SO\u2082", "nh3": "NH\u2083"}
@@ -578,7 +512,6 @@ if pm25_24h_ago_val and pm25_24h_ago_val > 0:
 _r2_values_all = [m["r2"] for m in model_info.values() if m.get("r2") is not None]
 avg_confidence = (sum(_r2_values_all) / len(_r2_values_all)) if _r2_values_all else None
 
-# One real, checkable sentence -- not a fabricated causal claim.
 ai_summary = (
     f"Air quality is currently <b>{current_label.upper()}</b> ({current_pm25:.0f} \u03bcg/m\u00b3 PM2.5). "
     f"PM2.5 is expected to {outlook_direction} over the next 3 days, shifting from {day1_val:.0f} "
@@ -586,9 +519,6 @@ ai_summary = (
     f"{labels[best_horizon]} looks most favorable for outdoor activity."
 )
 
-# =============================================================================
-# SECTION 1 -- HERO: current AQI, gauge, one-sentence AI summary
-# =============================================================================
 st.markdown(f"<div class='aqi-eyebrow'>LIVE \u00b7 {CITY_NAME.upper()}</div>", unsafe_allow_html=True)
 
 hero_left, hero_right = st.columns([1, 1.1])
@@ -648,10 +578,6 @@ with hero_right:
 st.caption(f"Last updated {latest_time.strftime('%b %d, %H:%M UTC')} \u00b7 updates hourly")
 st.divider()
 
-# =============================================================================
-# SECTION 2 -- 3-DAY AI FORECAST (clean cards, no technical labels here --
-# those live in the Model Confidence / About sections further down)
-# =============================================================================
 st.markdown("<div class='aqi-eyebrow'>3-DAY AI FORECAST</div>", unsafe_allow_html=True)
 
 if worst_label in ("Unhealthy", "Very Unhealthy", "Hazardous"):
@@ -698,9 +624,6 @@ with cols[3]:
     )
 st.divider()
 
-# =============================================================================
-# SECTION 3 -- INTERACTIVE TIMELINE
-# =============================================================================
 st.markdown("<div class='aqi-eyebrow'>INTERACTIVE TIMELINE</div>", unsafe_allow_html=True)
 
 forecast_times = [latest_time + pd.Timedelta(hours=h) for h in HORIZONS.values()]
@@ -724,9 +647,6 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 st.divider()
 
-# =============================================================================
-# SECTION 4 -- POLLUTANT BREAKDOWN (neutral -- no "top contributor" claim)
-# =============================================================================
 st.markdown("<div class='aqi-eyebrow'>POLLUTANT BREAKDOWN</div>", unsafe_allow_html=True)
 
 pollutant_cols = ["pm2_5", "pm10", "co", "no", "no2", "o3", "so2", "nh3"]
@@ -749,9 +669,6 @@ st.plotly_chart(poll_fig, use_container_width=True)
 st.caption("Raw pollutant concentrations from the latest hourly reading.")
 st.divider()
 
-# =============================================================================
-# SECTION 5 -- AI EXPLANATION (narrative, but every number is real)
-# =============================================================================
 st.markdown("<div class='aqi-eyebrow'>AI EXPLANATION</div>", unsafe_allow_html=True)
 
 pm25_24h_ago = float(df_raw["pm2_5"].iloc[-25]) if len(df_raw) > 24 else None
@@ -772,10 +689,6 @@ narrative = (
 st.markdown(f"<div class='aqi-ai-card'>{narrative}</div>", unsafe_allow_html=True)
 st.divider()
 
-# =============================================================================
-# SECTION 6 -- HEALTH RECOMMENDATIONS (real EPA guidance for the worst
-# category forecast in the 3-day window)
-# =============================================================================
 st.markdown("<div class='aqi-eyebrow'>HEALTH RECOMMENDATIONS</div>", unsafe_allow_html=True)
 st.caption(f"Based on the {worst_label} level reached in the current + 3-day forecast window")
 
@@ -785,11 +698,9 @@ for icon, text in HEALTH_GUIDANCE.get(worst_label, HEALTH_GUIDANCE["Moderate"]):
         unsafe_allow_html=True,
     )
 
-# "Best Day" widget -- honestly day-level, not hour-level, since our model
-# forecasts Day+1/2/3 (24h/48h/72h), not an hour-by-hour intraday curve.
 st.markdown("<div style='height:0.6em;'></div>", unsafe_allow_html=True)
 best_pred = predictions[best_horizon]
-best_pct_of_scale = min(best_pred / 150.4, 1.0)  # relative position on the "Unhealthy" threshold, capped at 100%
+best_pct_of_scale = min(best_pred / 150.4, 1.0)
 best_col1, best_col2 = st.columns([1, 2])
 with best_col1:
     ring_fig = go.Figure(go.Pie(
@@ -815,9 +726,6 @@ with best_col2:
     )
 st.divider()
 
-# =============================================================================
-# SECTION 7 -- MODEL CONFIDENCE (real cross-validated R\u00b2, explained honestly)
-# =============================================================================
 st.markdown("<div class='aqi-eyebrow'>MODEL CONFIDENCE</div>", unsafe_allow_html=True)
 st.caption(
     "R\u00b2 (cross-validated) \u2014 how much of the real variation in PM2.5 the model explains. "
@@ -847,9 +755,6 @@ for col, horizon_key in zip(conf_cols, HORIZONS):
             )
 st.divider()
 
-# =============================================================================
-# SECTION 8 -- ABOUT THIS MODEL
-# =============================================================================
 st.markdown("<div class='aqi-eyebrow'>ABOUT THIS MODEL</div>", unsafe_allow_html=True)
 
 about_col, map_col = st.columns([1.3, 1])
@@ -872,9 +777,6 @@ that specific horizon \u2014 not a single one-size-fits-all model.
 """,
     )
 with map_col:
-    # Layered glow sized by current severity -- an honest single-point
-    # indicator (not a fake multi-point heatmap, since we only monitor
-    # this one location).
     glow_sizes = [50, 34, 18]
     glow_opacities = [0.08, 0.16, 1.0]
     map_fig = go.Figure()

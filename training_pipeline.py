@@ -1,57 +1,3 @@
-"""
-training_pipeline.py
-----------------------
-STEP 3 of the AQI Predictor project (Phase D: Training Pipeline).
-
-WHY three separate models instead of one:
-    "3-day forecast" means the dashboard shows Day+1, Day+2, and Day+3
-    predictions (like a weather app), plus their average. A diagnostic
-    comparison found that forecast accuracy drops off sharply the further
-    ahead we predict (24h-ahead Ridge scored R2=0.14, positive and usable;
-    72h-ahead scored R2=-0.62). Forcing a single model to predict all three
-    horizons equally well would mean tuning it for the hardest case (72h)
-    at the expense of the easiest (24h) -- so instead we train one model
-    PER horizon, each free to be the best fit for that specific horizon.
-    The average shown on the dashboard is just the mean of these three
-    predictions computed at display time -- not a separately trained model,
-    since there's nothing to learn there beyond simple arithmetic.
-
-WHY predicting pm2_5 instead of the raw aqi index:
-    A diagnostic check found OpenWeather's "aqi" field is a blunt 1-5
-    category with weak variation in this dataset. PM2.5 (a real pollutant
-    concentration) is continuous and much more learnable.
-
-WHY TIME-SERIES CROSS-VALIDATION instead of one single train/test split:
-    A single chronological split can land entirely in an unusually calm or
-    volatile season, making results misleadingly good or bad. Rawalpindi
-    has a strong seasonal AQI cycle (volatile winter smog vs calmer
-    monsoon/summer), so we use TimeSeriesSplit with 5 folds sliding through
-    the whole dataset -- each fold tests on a different season -- and
-    average the results for an honest, season-robust estimate. A `gap`
-    equal to the forecast horizon sits between each fold's train and test
-    portions, so no training label ever references a value that falls
-    inside that fold's test window (which would otherwise be a subtle
-    leakage of future information into training).
-
-WHY four model types per horizon:
-    Ridge (simple linear baseline), Random Forest and Gradient Boosting
-    (handle non-linear feature interactions -- GB especially tends to
-    perform well on tabular data), and a small Neural Network (the
-    "advanced model" the project spec asks for). An earlier run found the
-    NN occasionally producing wildly wrong predictions after the log1p/
-    expm1 transform; this is fixed here with gradient clipping (clipnorm)
-    and early stopping on validation loss.
-
-WHY the final registered models are retrained on ALL available data:
-    Cross-validation is for HONESTLY MEASURING which model type is best per
-    horizon -- once we know that, holding out data serves no purpose for
-    the model we actually deploy, so each winning model type gets one final
-    training run on the complete dataset before being registered.
-
-Run manually:
-    python training_pipeline.py
-"""
-
 import os
 import sys
 
@@ -67,9 +13,6 @@ from sklearn.preprocessing import StandardScaler
 
 load_dotenv()
 
-# ---------------------------------------------------------------------------
-# CONFIG
-# ---------------------------------------------------------------------------
 HOPSWORKS_API_KEY = os.getenv("HOPSWORKS_API_KEY")
 HOPSWORKS_PROJECT_NAME = os.getenv("HOPSWORKS_PROJECT_NAME")
 HOPSWORKS_HOST = os.getenv("HOPSWORKS_HOST", "eu-west.cloud.hopsworks.ai")
@@ -78,7 +21,6 @@ CITY_NAME = os.getenv("CITY_NAME", "Rawalpindi")
 FEATURE_GROUP_NAME = "aqi_features"
 FEATURE_GROUP_VERSION = 3
 
-# One model trained per horizon -- see module docstring for why.
 HORIZONS = {
     "day1": 24,
     "day2": 48,
@@ -99,10 +41,6 @@ FEATURE_COLUMNS = [
 TARGET_COLUMN = "pm2_5_target"
 SOURCE_COLUMN_FOR_TARGET = "pm2_5"
 
-# PM2.5 concentrations don't realistically exceed roughly this range in
-# ambient air (WHO/EPA reporting scales top out around here). Clipping
-# predictions to this range is a safety net against any model producing a
-# physically implausible extreme value.
 MAX_PLAUSIBLE_PM2_5 = 1000.0
 
 
@@ -114,7 +52,6 @@ def load_feature_data(fs) -> pd.DataFrame:
 
 
 def add_lag_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Recent-trend features -- only look backward, so no future leakage."""
     df = df.copy()
     df["pm2_5_lag_24h"] = df["pm2_5"].shift(24)
     df["pm2_5_lag_48h"] = df["pm2_5"].shift(48)
@@ -124,7 +61,6 @@ def add_lag_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_training_target(df: pd.DataFrame, horizon_hours: int) -> pd.DataFrame:
-    """Build the target for a SPECIFIC horizon (24h, 48h, or 72h ahead)."""
     df = df.copy()
     df[TARGET_COLUMN] = df[SOURCE_COLUMN_FOR_TARGET].shift(-horizon_hours)
     df = df.dropna(subset=FEATURE_COLUMNS + [TARGET_COLUMN]).reset_index(drop=True)
@@ -160,11 +96,6 @@ def train_gradient_boosting(X_train, y_train):
 
 
 def train_neural_network(X_train, y_train, X_val=None, y_val=None, epochs=50):
-    """
-    Gradient clipping (clipnorm) + early stopping prevent the wild,
-    exploded predictions seen in an earlier run (a small log-space error
-    becomes huge once reversed with expm1 -- see module docstring).
-    """
     import tensorflow as tf
 
     model = tf.keras.Sequential([
@@ -203,7 +134,6 @@ def predict(model_name: str, model, X):
 
 
 def cross_validate_models(df: pd.DataFrame, horizon_hours: int) -> dict:
-    """TimeSeriesSplit CV for one horizon -- see module docstring for why."""
     X_all = df[FEATURE_COLUMNS]
     y_all_raw = df[TARGET_COLUMN].values
     y_all_log = np.log1p(y_all_raw)
@@ -241,22 +171,9 @@ def cross_validate_models(df: pd.DataFrame, horizon_hours: int) -> dict:
 
 
 def get_current_production_rmse(project, horizon_key: str):
-    """
-    Look up the RMSE of whatever model is CURRENTLY registered as latest for
-    this horizon, so a new candidate can be compared against it fairly.
-    Returns None if no model is registered yet (first-ever run for this
-    horizon), if its stored metrics don't include RMSE, or if anything about
-    this lookup fails for any reason -- all treated as "nothing confirmed to
-    beat yet", so a failed lookup here safely falls back to the pipeline's
-    original behavior (always register) rather than crashing the automation.
-    """
     try:
         mr = project.get_model_registry()
         registry_name = MODEL_REGISTRY_NAME_TEMPLATE.format(horizon_key=horizon_key)
-        # IMPORTANT: mr.get_model(name) WITHOUT a version does not return the
-        # latest version -- it defaults to version 1 (the first one ever
-        # registered), confirmed by Hopsworks' own "defaulting to 1" warning.
-        # We want the actual latest, so fetch all versions and pick the max.
         all_versions = mr.get_models(registry_name)
         if not all_versions:
             return None
@@ -295,13 +212,6 @@ def train_and_register_horizon(project, fs, df_with_lags: pd.DataFrame, horizon_
     print(f"\n  Best model for {horizon_key}: {best_name} "
           f"(avg RMSE={best_metrics['rmse']:.3f}, MAE={best_metrics['mae']:.3f}, R2={best_metrics['r2']:.3f})")
 
-    # WHY this check exists: without it, this daily automated run would
-    # ALWAYS overwrite the registered model regardless of whether today's
-    # cross-validation happened to land on a worse candidate by chance --
-    # cross-validated scores have some run-to-run noise, so an unlucky day
-    # could silently downgrade production. Comparing against whatever is
-    # CURRENTLY deployed (and only replacing it on a genuine improvement)
-    # protects against that.
     current_rmse = get_current_production_rmse(project, horizon_key)
     if current_rmse is not None and best_metrics["rmse"] >= current_rmse:
         print(f"  No improvement for {horizon_key}: today's best ({best_metrics['rmse']:.3f} RMSE) "
