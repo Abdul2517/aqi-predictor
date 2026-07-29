@@ -253,7 +253,14 @@ def get_current_production_rmse(project, horizon_key: str):
     try:
         mr = project.get_model_registry()
         registry_name = MODEL_REGISTRY_NAME_TEMPLATE.format(horizon_key=horizon_key)
-        model_meta = mr.get_model(registry_name)
+        # IMPORTANT: mr.get_model(name) WITHOUT a version does not return the
+        # latest version -- it defaults to version 1 (the first one ever
+        # registered), confirmed by Hopsworks' own "defaulting to 1" warning.
+        # We want the actual latest, so fetch all versions and pick the max.
+        all_versions = mr.get_models(registry_name)
+        if not all_versions:
+            return None
+        model_meta = max(all_versions, key=lambda m: m.version)
         metrics = getattr(model_meta, "training_metrics", None) or getattr(model_meta, "metrics", None)
         if metrics and "rmse" in metrics:
             return float(metrics["rmse"])

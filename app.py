@@ -185,7 +185,16 @@ def parse_inference_notes(path: str) -> dict:
 def load_horizon_model(_project, horizon_key: str):
     mr = _project.get_model_registry()
     registry_name = MODEL_REGISTRY_NAME_TEMPLATE.format(horizon_key=horizon_key)
-    model_meta = mr.get_model(registry_name)  # no version -> latest
+    # IMPORTANT: mr.get_model(name) WITHOUT a version does not return the
+    # latest version -- it silently defaults to version 1 (the very first
+    # one ever registered), confirmed by Hopsworks' own "defaulting to 1"
+    # warning. That bug meant this dashboard could show a stale, outdated
+    # model even after better ones were registered. Fetch all versions and
+    # explicitly pick the highest one instead.
+    all_versions = mr.get_models(registry_name)
+    if not all_versions:
+        raise RuntimeError(f"No registered model found for '{registry_name}'.")
+    model_meta = max(all_versions, key=lambda m: m.version)
     download_dir = model_meta.download()
 
     with open(os.path.join(download_dir, "model_type.txt")) as f:
