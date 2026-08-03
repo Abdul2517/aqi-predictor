@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+:root {
+  --font-display: "Fraunces", serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: #0a1b33;
+  background-image:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.08), transparent 45%),
+    radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.05), transparent 45%),
+    linear-gradient(180deg, #071426 0%, #0a1b33 50%, #10264a 100%);
+  background-attachment: fixed;
+  color: #f5f2ea;
+  min-height: 100vh;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+  color: #f5f2ea;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #7dd3c0;
+  font-weight: 600;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-card {
+  background: rgba(159, 214, 184, 0.08);
+  border: 1px solid rgba(159, 214, 184, 0.3);
+  border-radius: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in-up,
+  .glass-card {
+    animation: none;
+    transition: none;
+  }
+}
