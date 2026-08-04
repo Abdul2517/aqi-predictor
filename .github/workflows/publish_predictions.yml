@@ -1,0 +1,43 @@
+name: Publish Predictions
+
+on:
+  schedule:
+    - cron: "5 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  publish-predictions:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Publish predictions JSON
+        env:
+          HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+          HOPSWORKS_PROJECT_NAME: ${{ secrets.HOPSWORKS_PROJECT_NAME }}
+          HOPSWORKS_HOST: ${{ secrets.HOPSWORKS_HOST }}
+          CITY_NAME: ${{ secrets.CITY_NAME }}
+          CITY_LAT: ${{ secrets.CITY_LAT }}
+          CITY_LON: ${{ secrets.CITY_LON }}
+        run: python publish_predictions.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add frontend/public/predictions.json
+          git diff --staged --quiet || git commit -m "Update predictions.json"
+          git push
