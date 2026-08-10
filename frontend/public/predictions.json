@@ -2,7 +2,7 @@
   "city": "Rawalpindi",
   "lat": 33.5651,
   "lon": 73.0169,
-  "generated_at": "2026-08-10T21:07:36.792493+00:00",
+  "generated_at": "2026-08-10T22:03:39.131403+00:00",
   "last_data_update": "2026-08-10T20:08:45.946727+00:00",
   "current": {
     "pm2_5": 85.83,
@@ -25,7 +25,7 @@
       "r2": 0.539825539894115
     },
     "day3": {
-      "pm2_5": 84.9328316798844,
+      "pm2_5": 84.93283167988439,
       "category": "Unhealthy",
       "model_type": "ridge",
       "version": 16,
@@ -37,7 +37,7 @@
     "category": "Unhealthy"
   },
   "best_day": "day1",
-  "outlook_pct_3day": 19.00426453021232,
+  "outlook_pct_3day": 19.0042645302123,
   "pollutants": {
     "pm2_5": 85.83,
     "pm10": 95.71,
