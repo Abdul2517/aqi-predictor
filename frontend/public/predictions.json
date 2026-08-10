@@ -2,30 +2,30 @@
   "city": "Rawalpindi",
   "lat": 33.5651,
   "lon": 73.0169,
-  "generated_at": "2026-08-10T06:49:18.988724+00:00",
-  "last_data_update": "2026-08-10T06:43:18.326439+00:00",
+  "generated_at": "2026-08-10T08:55:40.030202+00:00",
+  "last_data_update": "2026-08-10T08:52:19.575890+00:00",
   "current": {
-    "pm2_5": 38.15,
+    "pm2_5": 41.8,
     "category": "Unhealthy for Sensitive Groups",
-    "trend_pct_24h": -49.356166202044335
+    "trend_pct_24h": -34.68750000000001
   },
   "predictions": {
     "day1": {
-      "pm2_5": 52.34828416816029,
-      "category": "Unhealthy for Sensitive Groups",
+      "pm2_5": 60.55068617084946,
+      "category": "Unhealthy",
       "model_type": "random_forest",
       "version": 11,
       "r2": 0.644913771687432
     },
     "day2": {
-      "pm2_5": 78.94165474832354,
+      "pm2_5": 73.39714150168436,
       "category": "Unhealthy",
       "model_type": "ridge",
       "version": 16,
       "r2": 0.539825539894115
     },
     "day3": {
-      "pm2_5": 65.24973051188422,
+      "pm2_5": 60.719403631974814,
       "category": "Unhealthy",
       "model_type": "ridge",
       "version": 16,
@@ -33,20 +33,20 @@
     }
   },
   "average": {
-    "pm2_5": 65.51322314278936,
+    "pm2_5": 64.88907710150288,
     "category": "Unhealthy"
   },
   "best_day": "day1",
-  "outlook_pct_3day": 24.645404426781496,
+  "outlook_pct_3day": 0.278638396680265,
   "pollutants": {
-    "pm2_5": 38.15,
-    "pm10": 44.11,
-    "co": 468.88,
-    "no": 0.16,
-    "no2": 1.51,
-    "o3": 142.48,
-    "so2": 2.48,
-    "nh3": 0.95
+    "pm2_5": 41.8,
+    "pm10": 47.78,
+    "co": 459.06,
+    "no": 0.15,
+    "no2": 1.47,
+    "o3": 149.32,
+    "so2": 2.23,
+    "nh3": 0.99
   },
   "trend": [
     {
