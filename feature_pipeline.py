@@ -6,16 +6,14 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
+from cities_config import CITIES
+
 load_dotenv()
 
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 HOPSWORKS_API_KEY = os.getenv("HOPSWORKS_API_KEY")
 HOPSWORKS_PROJECT_NAME = os.getenv("HOPSWORKS_PROJECT_NAME")
 HOPSWORKS_HOST = os.getenv("HOPSWORKS_HOST", "eu-west.cloud.hopsworks.ai")
-
-CITY_NAME = os.getenv("CITY_NAME", "Rawalpindi")
-CITY_LAT = float(os.getenv("CITY_LAT", "33.5651"))
-CITY_LON = float(os.getenv("CITY_LON", "73.0169"))
 
 AIR_POLLUTION_URL = "http://api.openweathermap.org/data/2.5/air_pollution"
 WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
@@ -56,11 +54,16 @@ def fetch_weather(lat: float, lon: float) -> dict:
     }
 
 
-def get_previous_aqi(fs) -> float | None:
+def get_previous_aqi(fs, city_name: str) -> float | None:
+    # WHY per-city lookup: each city needs its own change-rate baseline --
+    # comparing Lahore's new reading against Karachi's last row would be
+    # meaningless. Filtering by city_name (unchanged logic from the
+    # single-city version) already handled this correctly; it just needs
+    # to be called once per city now instead of using a fixed global city.
     try:
         fg = fs.get_feature_group(name=FEATURE_GROUP_NAME, version=FEATURE_GROUP_VERSION)
         df = fg.read()
-        city_df = df[df["city"] == CITY_NAME].sort_values("event_time")
+        city_df = df[df["city"] == city_name].sort_values("event_time")
         if city_df.empty:
             return None
         return float(city_df.iloc[-1]["aqi"])
@@ -68,11 +71,11 @@ def get_previous_aqi(fs) -> float | None:
         return None
 
 
-def build_feature_row(raw_pollution: dict, raw_weather: dict, previous_aqi: float | None) -> dict:
+def build_feature_row(city_name: str, raw_pollution: dict, raw_weather: dict, previous_aqi: float | None) -> dict:
     now = datetime.now(timezone.utc)
 
     row = {
-        "city": CITY_NAME,
+        "city": city_name,
         "event_time": now,
         "hour": now.hour,
         "day": now.day,
@@ -106,6 +109,26 @@ def write_to_feature_store(fs, row: dict):
     print(f"Inserted feature row for {row['city']} at {row['event_time']}")
 
 
+def run_for_city(fs, city_key: str, city_info: dict):
+    city_name = city_info["name"]
+    lat = city_info["lat"]
+    lon = city_info["lon"]
+
+    print(f"\n=== {city_name} ===")
+    print(f"Fetching raw pollution + weather data for {city_name}...")
+    raw_pollution = fetch_air_pollution(lat, lon)
+    raw_weather = fetch_weather(lat, lon)
+
+    print("Looking up previous AQI reading for change-rate calculation...")
+    previous_aqi = get_previous_aqi(fs, city_name)
+
+    print("Building feature row...")
+    row = build_feature_row(city_name, raw_pollution, raw_weather, previous_aqi)
+
+    print("Writing feature row to Hopsworks Feature Store...")
+    write_to_feature_store(fs, row)
+
+
 def main():
     if not OPENWEATHER_API_KEY:
         sys.exit("Missing OPENWEATHER_API_KEY. Set it in .env or as a GitHub Actions secret.")
@@ -123,18 +146,24 @@ def main():
     )
     fs = project.get_feature_store()
 
-    print(f"Fetching raw pollution + weather data for {CITY_NAME}...")
-    raw_pollution = fetch_air_pollution(CITY_LAT, CITY_LON)
-    raw_weather = fetch_weather(CITY_LAT, CITY_LON)
+    # WHY loop over CITIES instead of a single hardcoded city: this is the
+    # entire point of Phase 1 -- the feature pipeline now collects data for
+    # every city listed in cities_config.py, with zero per-city special
+    # casing. Adding a 5th city later means adding one dict entry there;
+    # this loop automatically picks it up with no changes here.
+    errors = []
+    for city_key, city_info in CITIES.items():
+        try:
+            run_for_city(fs, city_key, city_info)
+        except Exception as e:
+            # One city's API hiccup shouldn't take down the other three --
+            # log it and keep going, then report all failures at the end.
+            print(f"  FAILED for {city_info['name']}: {e}")
+            errors.append(city_info["name"])
 
-    print("Looking up previous AQI reading for change-rate calculation...")
-    previous_aqi = get_previous_aqi(fs)
-
-    print("Building feature row...")
-    row = build_feature_row(raw_pollution, raw_weather, previous_aqi)
-
-    print("Writing feature row to Hopsworks Feature Store...")
-    write_to_feature_store(fs, row)
+    if errors:
+        sys.exit(f"\nCompleted with failures for: {', '.join(errors)}")
+    print(f"\nCompleted successfully for all {len(CITIES)} cities.")
 
 
 if __name__ == "__main__":
