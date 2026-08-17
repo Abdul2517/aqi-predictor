@@ -11,12 +11,13 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler
 
+from cities_config import CITIES
+
 load_dotenv()
 
 HOPSWORKS_API_KEY = os.getenv("HOPSWORKS_API_KEY")
 HOPSWORKS_PROJECT_NAME = os.getenv("HOPSWORKS_PROJECT_NAME")
 HOPSWORKS_HOST = os.getenv("HOPSWORKS_HOST", "eu-west.cloud.hopsworks.ai")
-CITY_NAME = os.getenv("CITY_NAME", "Rawalpindi")
 
 FEATURE_GROUP_NAME = "aqi_features"
 FEATURE_GROUP_VERSION = 3
@@ -28,7 +29,12 @@ HORIZONS = {
 }
 N_CV_FOLDS = 5
 
-MODEL_REGISTRY_NAME_TEMPLATE = "aqi_forecast_model_{horizon_key}"
+# WHY city_key is now part of the registry name: Phase 2's whole point is
+# separate models per city (Option A from our earlier discussion) -- each
+# city learns its own local patterns rather than sharing one model. This
+# template is the only place that needed to change to make every other
+# function below "just work" once city_key is threaded through.
+MODEL_REGISTRY_NAME_TEMPLATE = "aqi_forecast_model_{city_key}_{horizon_key}"
 
 FEATURE_COLUMNS = [
     "hour", "day", "month", "day_of_week",
@@ -43,11 +49,13 @@ SOURCE_COLUMN_FOR_TARGET = "pm2_5"
 
 MAX_PLAUSIBLE_PM2_5 = 1000.0
 
+MIN_ROWS_FOR_TRAINING = (N_CV_FOLDS + 1) * 200  # same threshold as before, now checked per-city
 
-def load_feature_data(fs) -> pd.DataFrame:
+
+def load_feature_data(fs, city_name: str) -> pd.DataFrame:
     fg = fs.get_feature_group(name=FEATURE_GROUP_NAME, version=FEATURE_GROUP_VERSION)
     df = fg.read()
-    df = df[df["city"] == CITY_NAME].sort_values("event_time").reset_index(drop=True)
+    df = df[df["city"] == city_name].sort_values("event_time").reset_index(drop=True)
     return df
 
 
@@ -170,10 +178,10 @@ def cross_validate_models(df: pd.DataFrame, horizon_hours: int) -> dict:
     return avg_metrics
 
 
-def get_current_production_rmse(project, horizon_key: str):
+def get_current_production_rmse(project, city_key: str, horizon_key: str):
     try:
         mr = project.get_model_registry()
-        registry_name = MODEL_REGISTRY_NAME_TEMPLATE.format(horizon_key=horizon_key)
+        registry_name = MODEL_REGISTRY_NAME_TEMPLATE.format(city_key=city_key, horizon_key=horizon_key)
         all_versions = mr.get_models(registry_name)
         if not all_versions:
             return None
@@ -182,46 +190,47 @@ def get_current_production_rmse(project, horizon_key: str):
         if metrics and "rmse" in metrics:
             return float(metrics["rmse"])
     except Exception as e:
-        print(f"  (Could not look up current production metrics for {horizon_key}: {e}. "
+        print(f"  (Could not look up current production metrics for {city_key}/{horizon_key}: {e}. "
               f"Proceeding as if no prior model exists.)")
     return None
 
 
-def train_and_register_horizon(project, fs, df_with_lags: pd.DataFrame, horizon_key: str, horizon_hours: int):
-    print(f"\n{'=' * 70}")
-    print(f"HORIZON: {horizon_key} ({horizon_hours}h ahead)")
-    print(f"{'=' * 70}")
+def train_and_register_horizon(project, fs, df_with_lags: pd.DataFrame, city_key: str, city_name: str,
+                                horizon_key: str, horizon_hours: int):
+    print(f"\n{'-' * 70}")
+    print(f"{city_name} / {horizon_key} ({horizon_hours}h ahead)")
+    print(f"{'-' * 70}")
 
     df = build_training_target(df_with_lags, horizon_hours)
     print(f"  -> {len(df)} rows usable for this horizon")
 
-    min_rows_needed = (N_CV_FOLDS + 1) * 200
-    if len(df) < min_rows_needed:
-        print(f"  SKIPPING {horizon_key}: only {len(df)} usable rows, need at least {min_rows_needed}.")
+    if len(df) < MIN_ROWS_FOR_TRAINING:
+        print(f"  SKIPPING {city_name}/{horizon_key}: only {len(df)} usable rows, "
+              f"need at least {MIN_ROWS_FOR_TRAINING}.")
         return
 
     print(f"  Running {N_CV_FOLDS}-fold time-series cross-validation (gap={horizon_hours}h)...")
     avg_metrics = cross_validate_models(df, horizon_hours)
 
-    print(f"\n  === {horizon_key} cross-validated average metrics ===")
+    print(f"\n  === {city_name}/{horizon_key} cross-validated average metrics ===")
     for name, m in avg_metrics.items():
         print(f"    {name:<18} RMSE={m['rmse']:6.2f}  MAE={m['mae']:6.2f}  R2={m['r2']:6.3f}")
 
     best_name = min(avg_metrics, key=lambda name: avg_metrics[name]["rmse"])
     best_metrics = avg_metrics[best_name]
-    print(f"\n  Best model for {horizon_key}: {best_name} "
+    print(f"\n  Best model for {city_name}/{horizon_key}: {best_name} "
           f"(avg RMSE={best_metrics['rmse']:.3f}, MAE={best_metrics['mae']:.3f}, R2={best_metrics['r2']:.3f})")
 
-    current_rmse = get_current_production_rmse(project, horizon_key)
+    current_rmse = get_current_production_rmse(project, city_key, horizon_key)
     if current_rmse is not None and best_metrics["rmse"] >= current_rmse:
-        print(f"  No improvement for {horizon_key}: today's best ({best_metrics['rmse']:.3f} RMSE) "
+        print(f"  No improvement for {city_name}/{horizon_key}: today's best ({best_metrics['rmse']:.3f} RMSE) "
               f"does not beat the current production model ({current_rmse:.3f} RMSE). "
               f"Keeping the existing deployed model -- not registering.")
         return
     if current_rmse is not None:
         print(f"  IMPROVEMENT: {best_metrics['rmse']:.3f} < current production {current_rmse:.3f}. Proceeding.")
     else:
-        print(f"  No existing production model found for {horizon_key} -- registering this as the first one.")
+        print(f"  No existing production model found for {city_name}/{horizon_key} -- registering as the first one.")
 
     print(f"  Retraining {best_name} on the FULL dataset for deployment...")
     X_all_raw = df[FEATURE_COLUMNS]
@@ -231,7 +240,7 @@ def train_and_register_horizon(project, fs, df_with_lags: pd.DataFrame, horizon_
     X_all = final_scaler.fit_transform(X_all_raw)
     final_model = MODEL_BUILDERS[best_name](X_all, y_all_log, None, None)
 
-    save_dir = f"saved_model_{horizon_key}"
+    save_dir = f"saved_model_{city_key}_{horizon_key}"
     os.makedirs(save_dir, exist_ok=True)
     joblib.dump(final_scaler, f"{save_dir}/scaler.pkl")
     if best_name == "neural_network":
@@ -246,23 +255,52 @@ def train_and_register_horizon(project, fs, df_with_lags: pd.DataFrame, horizon_
         f.write(f"feature_columns={FEATURE_COLUMNS}\n")
         f.write(f"forecast_horizon_hours={horizon_hours}\n")
         f.write(f"horizon_key={horizon_key}\n")
+        f.write(f"city_key={city_key}\n")
 
-    print(f"  Registering {horizon_key} model in Hopsworks Model Registry...")
+    print(f"  Registering {city_name}/{horizon_key} model in Hopsworks Model Registry...")
     mr = project.get_model_registry()
-    registry_name = MODEL_REGISTRY_NAME_TEMPLATE.format(horizon_key=horizon_key)
+    registry_name = MODEL_REGISTRY_NAME_TEMPLATE.format(city_key=city_key, horizon_key=horizon_key)
     model = mr.python.create_model(
         name=registry_name,
         metrics=best_metrics,
         description=(
-            f"AQI/PM2.5 {horizon_hours}h-ahead ({horizon_key}) forecast model for {CITY_NAME}. "
+            f"AQI/PM2.5 {horizon_hours}h-ahead ({horizon_key}) forecast model for {city_name}. "
             f"Predicts pm2_5 concentration (continuous). Model type '{best_name}' selected via "
             f"{N_CV_FOLDS}-fold time-series cross-validation across multiple seasons; "
-            f"final model retrained on full dataset. Part of a 3-day forecast set "
-            f"(day1/day2/day3); the dashboard average is computed from all three at display time."
+            f"final model retrained on full dataset. Part of a per-city 3-day forecast set."
         ),
     )
     model.save(save_dir)
     print(f"  Registered: {registry_name}")
+
+
+def train_city(project, fs, city_key: str, city_info: dict):
+    city_name = city_info["name"]
+    print(f"\n{'=' * 70}")
+    print(f"CITY: {city_name}")
+    print(f"{'=' * 70}")
+
+    print(f"Loading stored feature data for {city_name}...")
+    df = load_feature_data(fs, city_name)
+    print(f"  -> {len(df)} raw rows loaded")
+
+    # WHY this check exists: the 3 newly-added cities only just started
+    # collecting hourly data (Phase 1) and haven't necessarily been
+    # backfilled yet. Without this, a city with a handful of rows would
+    # either crash deep inside cross-validation or silently waste time --
+    # this gives a clear, early, per-city message instead, while letting
+    # any city that DOES have enough data (e.g. Rawalpindi) proceed normally.
+    if len(df) < MIN_ROWS_FOR_TRAINING:
+        print(f"  SKIPPING {city_name} entirely: only {len(df)} raw rows available, "
+              f"need at least {MIN_ROWS_FOR_TRAINING} before any horizon can be trained. "
+              f"Run backfill_pipeline.py for {city_name} first.")
+        return
+
+    print("Adding lag/rolling trend features...")
+    df = add_lag_features(df)
+
+    for horizon_key, horizon_hours in HORIZONS.items():
+        train_and_register_horizon(project, fs, df, city_key, city_name, horizon_key, horizon_hours)
 
 
 def main():
@@ -277,21 +315,21 @@ def main():
     )
     fs = project.get_feature_store()
 
-    print(f"Loading stored feature data for {CITY_NAME}...")
-    df = load_feature_data(fs)
-    print(f"  -> {len(df)} raw rows loaded")
-
-    print("Adding lag/rolling trend features...")
-    df = add_lag_features(df)
-
-    for horizon_key, horizon_hours in HORIZONS.items():
-        train_and_register_horizon(project, fs, df, horizon_key, horizon_hours)
+    # WHY loop over CITIES: same Phase 1 pattern -- one model SET (3
+    # horizons) per city, all reusing identical training/CV logic. Adding
+    # a 5th city to cities_config.py means it trains automatically next
+    # run, no changes needed here.
+    for city_key, city_info in CITIES.items():
+        train_city(project, fs, city_key, city_info)
 
     print(f"\n{'=' * 70}")
-    print("All horizons complete. Three models registered:")
-    for horizon_key, horizon_hours in HORIZONS.items():
-        print(f"  - {MODEL_REGISTRY_NAME_TEMPLATE.format(horizon_key=horizon_key)} ({horizon_hours}h ahead)")
-    print("The dashboard average = mean of day1/day2/day3 predictions, computed at display time.")
+    print("All cities processed.")
+    for city_key, city_info in CITIES.items():
+        for horizon_key, horizon_hours in HORIZONS.items():
+            name = MODEL_REGISTRY_NAME_TEMPLATE.format(city_key=city_key, horizon_key=horizon_key)
+            print(f"  - {name} ({horizon_hours}h ahead)")
+    print("Cities with insufficient data were skipped -- see log above. "
+          "Run backfill_pipeline.py for any skipped city, then re-run this script.")
 
 
 if __name__ == "__main__":
