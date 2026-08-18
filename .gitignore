@@ -4,12 +4,4 @@ __pycache__/
 *.pyc
 .pytest_cache/
 saved_model/
-saved_model_day1/
-saved_model_day2/
-saved_model_day3/
-saved_model_day1_lstm/
-saved_model_day2_lstm/
-saved_model_day3_lstm/
-saved_model_day1_tuned/
-saved_model_day2_tuned/
-saved_model_day3_tuned/
+saved_model_*/
