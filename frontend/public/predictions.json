@@ -2,57 +2,53 @@
   "city": "Rawalpindi",
   "lat": 33.5651,
   "lon": 73.0169,
-  "generated_at": "2026-08-21T03:27:43.868629+00:00",
-  "last_data_update": "2026-08-21T03:18:31.008447+00:00",
+  "generated_at": "2026-08-21T05:53:29.394582+00:00",
+  "last_data_update": "2026-08-21T05:49:13.501400+00:00",
   "current": {
-    "pm2_5": 45.03,
-    "category": "Unhealthy for Sensitive Groups",
-    "trend_pct_24h": -25.409971840318036
+    "pm2_5": 56.0,
+    "category": "Unhealthy",
+    "trend_pct_24h": 24.555160142348754
   },
   "predictions": {
     "day1": {
-      "pm2_5": 50.311585395497815,
-      "category": "Unhealthy for Sensitive Groups",
+      "pm2_5": 58.49497907218782,
+      "category": "Unhealthy",
       "model_type": "random_forest",
       "version": 14,
       "r2": 0.644823935012521
     },
     "day2": {
-      "pm2_5": 67.42656598433119,
+      "pm2_5": 66.83165377919221,
       "category": "Unhealthy",
       "model_type": "ridge",
       "version": 16,
       "r2": 0.539825539894115
     },
     "day3": {
-      "pm2_5": 56.836107666816645,
-      "category": "Unhealthy",
+      "pm2_5": 54.163566795147524,
+      "category": "Unhealthy for Sensitive Groups",
       "model_type": "ridge",
       "version": 23,
       "r2": 0.504899188237538
     }
   },
   "average": {
-    "pm2_5": 58.19141968221521,
+    "pm2_5": 59.83006654884252,
     "category": "Unhealthy"
   },
-  "best_day": "day1",
-  "outlook_pct_3day": 12.968230319179494,
+  "best_day": "day3",
+  "outlook_pct_3day": -7.404759084869419,
   "pollutants": {
-    "pm2_5": 45.03,
-    "pm10": 52.58,
-    "co": 525.28,
-    "no": 0.58,
-    "no2": 8.66,
-    "o3": 59.19,
-    "so2": 2.44,
-    "nh3": 1.35
+    "pm2_5": 56.0,
+    "pm10": 68.86,
+    "co": 437.68,
+    "no": 0.46,
+    "no2": 4.34,
+    "o3": 112.72,
+    "so2": 2.97,
+    "nh3": 0.92
   },
   "trend": [
-    {
-      "time": "2026-08-14T04:00:00+00:00",
-      "pm2_5": 63.57
-    },
     {
       "time": "2026-08-14T06:00:00+00:00",
       "pm2_5": 79.07
@@ -420,6 +416,10 @@
     {
       "time": "2026-08-21T03:18:31.008447+00:00",
       "pm2_5": 45.03
+    },
+    {
+      "time": "2026-08-21T05:49:13.501400+00:00",
+      "pm2_5": 56.0
     }
   ]
 }
