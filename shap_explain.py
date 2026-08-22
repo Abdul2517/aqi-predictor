@@ -1,3 +1,4 @@
+import argparse
 import os
 
 import joblib
@@ -8,18 +9,21 @@ import pandas as pd
 import shap
 from dotenv import load_dotenv
 
+from cities_config import CITIES
+
 matplotlib.use("Agg")
 load_dotenv()
 
 HOPSWORKS_API_KEY = os.getenv("HOPSWORKS_API_KEY")
 HOPSWORKS_PROJECT_NAME = os.getenv("HOPSWORKS_PROJECT_NAME")
 HOPSWORKS_HOST = os.getenv("HOPSWORKS_HOST", "eu-west.cloud.hopsworks.ai")
-CITY_NAME = os.getenv("CITY_NAME", "Rawalpindi")
 
 FEATURE_GROUP_NAME = "aqi_features"
 FEATURE_GROUP_VERSION = 3
 HORIZONS = {"day1": 24, "day2": 48, "day3": 72}
-MODEL_REGISTRY_NAME_TEMPLATE = "aqi_forecast_model_{horizon_key}"
+# Same naming convention as training_pipeline.py and publish_predictions.py --
+# city is now part of the registry name.
+MODEL_REGISTRY_NAME_TEMPLATE = "aqi_forecast_model_{city_key}_{horizon_key}"
 
 TABULAR_FEATURE_COLUMNS = [
     "hour", "day", "month", "day_of_week",
@@ -54,9 +58,9 @@ def add_cyclical_hour(df):
     return df
 
 
-def load_horizon_model(project, horizon_key):
+def load_horizon_model(project, city_key, horizon_key):
     mr = project.get_model_registry()
-    registry_name = MODEL_REGISTRY_NAME_TEMPLATE.format(horizon_key=horizon_key)
+    registry_name = MODEL_REGISTRY_NAME_TEMPLATE.format(city_key=city_key, horizon_key=horizon_key)
     all_versions = mr.get_models(registry_name)
     if not all_versions:
         raise RuntimeError(f"No registered model found for '{registry_name}'.")
@@ -98,7 +102,7 @@ def make_predict_fn(bundle):
     return lambda X: np.array(model.predict(X)).reshape(-1)
 
 
-def explain_tabular_horizon(bundle, df_tabular, horizon_key, n_background=100, n_explain=300):
+def explain_tabular_horizon(bundle, df_tabular, horizon_key, output_dir, n_background=100, n_explain=300):
     print(f"  Building SHAP explainer for {horizon_key} ({bundle['model_type']}, tabular)...")
     sample = df_tabular[TABULAR_FEATURE_COLUMNS].sample(
         min(n_background + n_explain, len(df_tabular)), random_state=42
@@ -121,8 +125,8 @@ def explain_tabular_horizon(bundle, df_tabular, horizon_key, n_background=100, n
     ax.set_xlabel("Mean |SHAP value| (impact on prediction, \u03bcg/m\u00b3)")
     ax.set_title(f"Feature Importance \u2014 {horizon_key} ({bundle['model_type']})")
     fig.tight_layout()
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    path = os.path.join(OUTPUT_DIR, f"shap_{horizon_key}_importance.png")
+    os.makedirs(output_dir, exist_ok=True)
+    path = os.path.join(output_dir, f"shap_{horizon_key}_importance.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved {path}")
@@ -132,7 +136,7 @@ def explain_tabular_horizon(bundle, df_tabular, horizon_key, n_background=100, n
         print(f"    {TABULAR_FEATURE_COLUMNS[i]:<25} mean|SHAP|={mean_abs[i]:.3f}")
 
 
-def explain_sequence_horizon(bundle, df_seq, horizon_key, n_background=30, n_explain=60):
+def explain_sequence_horizon(bundle, df_seq, horizon_key, output_dir, n_background=30, n_explain=60):
     print(f"  Building SHAP explainer for {horizon_key} ({bundle['model_type']}, sequence model)...")
     print(f"  Note: explaining WINDOW-AVERAGED feature levels (not per-hour timestep detail), "
           f"since the full per-timestep input space is too high-dimensional for tractable SHAP computation.")
@@ -177,8 +181,8 @@ def explain_sequence_horizon(bundle, df_seq, horizon_key, n_background=30, n_exp
     ax.set_xlabel("Mean |SHAP value| (impact on prediction, \u03bcg/m\u00b3)")
     ax.set_title(f"Feature Importance \u2014 {horizon_key} ({bundle['model_type']}, window-averaged)")
     fig.tight_layout()
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    path = os.path.join(OUTPUT_DIR, f"shap_{horizon_key}_importance.png")
+    os.makedirs(output_dir, exist_ok=True)
+    path = os.path.join(output_dir, f"shap_{horizon_key}_importance.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved {path}")
@@ -188,7 +192,43 @@ def explain_sequence_horizon(bundle, df_seq, horizon_key, n_background=30, n_exp
         print(f"    {SEQ_FEATURE_COLUMNS[i]:<25} mean|SHAP|={mean_abs[i]:.3f}")
 
 
+def process_city_shap(project, df_all, city_key, city_info):
+    """Run SHAP for all 3 horizons for one city. Raises on failure so the
+    caller can catch it and move on without touching other cities."""
+    city_name = city_info["name"]
+    print(f"\n{'=' * 70}")
+    print(f"CITY: {city_name}")
+    print(f"{'=' * 70}")
+
+    df = df_all[df_all["city"] == city_name].sort_values("event_time").reset_index(drop=True)
+    print(f"  -> {len(df)} rows loaded")
+    if df.empty:
+        raise RuntimeError(f"No feature rows found for city='{city_name}' in the feature store.")
+
+    df_tabular = add_lag_features(df).dropna(subset=TABULAR_FEATURE_COLUMNS).reset_index(drop=True)
+    df_seq = add_cyclical_hour(df)
+    output_dir = os.path.join(OUTPUT_DIR, city_key)
+
+    for horizon_key in HORIZONS:
+        print(f"\n--- {city_name} / {horizon_key} ---")
+        bundle = load_horizon_model(project, city_key, horizon_key)
+        print(f"  Deployed model: {bundle['model_type']} (v{bundle['version']})")
+        if bundle["is_sequence"]:
+            explain_sequence_horizon(bundle, df_seq, horizon_key, output_dir)
+        else:
+            explain_tabular_horizon(bundle, df_tabular, horizon_key, output_dir)
+
+
 def main():
+    parser = argparse.ArgumentParser(description="Generate per-city, per-horizon SHAP feature importance charts.")
+    parser.add_argument(
+        "--city", choices=list(CITIES.keys()), default=None,
+        help="Optional: run only this city (e.g. --city rawalpindi). Default: run all configured cities.",
+    )
+    args = parser.parse_args()
+
+    cities_to_run = {args.city: CITIES[args.city]} if args.city else CITIES
+
     import hopsworks
 
     print(f"Connecting to Hopsworks project '{HOPSWORKS_PROJECT_NAME}'...")
@@ -198,24 +238,23 @@ def main():
     fs = project.get_feature_store()
     fg = fs.get_feature_group(name=FEATURE_GROUP_NAME, version=FEATURE_GROUP_VERSION)
 
-    print(f"Loading stored feature data for {CITY_NAME}...")
-    df = fg.read()
-    df = df[df["city"] == CITY_NAME].sort_values("event_time").reset_index(drop=True)
-    print(f"  -> {len(df)} rows loaded")
+    print("Loading feature data for all cities (single read, filtered per city)...")
+    df_all = fg.read()
+    print(f"  -> {len(df_all)} total rows across all cities")
 
-    df_tabular = add_lag_features(df).dropna(subset=TABULAR_FEATURE_COLUMNS).reset_index(drop=True)
-    df_seq = add_cyclical_hour(df)
+    succeeded, failed = [], []
+    for city_key, city_info in cities_to_run.items():
+        try:
+            process_city_shap(project, df_all, city_key, city_info)
+            succeeded.append(city_key)
+            print(f"\n  \u2713 {city_info['name']} SHAP complete")
+        except Exception as e:
+            print(f"\n  \u2717 {city_info['name']} FAILED: {e}")
+            failed.append(city_key)
 
-    for horizon_key in HORIZONS:
-        print(f"\n=== {horizon_key} ===")
-        bundle = load_horizon_model(project, horizon_key)
-        print(f"  Deployed model: {bundle['model_type']} (v{bundle['version']})")
-        if bundle["is_sequence"]:
-            explain_sequence_horizon(bundle, df_seq, horizon_key)
-        else:
-            explain_tabular_horizon(bundle, df_tabular, horizon_key)
-
-    print(f"\nAll SHAP charts saved to ./{OUTPUT_DIR}/")
+    print(f"\n{'=' * 70}")
+    print(f"All requested cities processed. Succeeded: {succeeded} | Failed: {failed}")
+    print(f"Charts saved under ./{OUTPUT_DIR}/<city_key>/")
 
 
 if __name__ == "__main__":
