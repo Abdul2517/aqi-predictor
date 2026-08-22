@@ -7,19 +7,20 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
+from cities_config import CITIES
+
 load_dotenv()
 
 HOPSWORKS_API_KEY = os.getenv("HOPSWORKS_API_KEY")
 HOPSWORKS_PROJECT_NAME = os.getenv("HOPSWORKS_PROJECT_NAME")
 HOPSWORKS_HOST = os.getenv("HOPSWORKS_HOST", "eu-west.cloud.hopsworks.ai")
-CITY_NAME = os.getenv("CITY_NAME", "Rawalpindi")
-CITY_LAT = float(os.getenv("CITY_LAT", "33.5651"))
-CITY_LON = float(os.getenv("CITY_LON", "73.0169"))
 
 FEATURE_GROUP_NAME = "aqi_features"
 FEATURE_GROUP_VERSION = 3
 HORIZONS = {"day1": 24, "day2": 48, "day3": 72}
-MODEL_REGISTRY_NAME_TEMPLATE = "aqi_forecast_model_{horizon_key}"
+# Fixed: model name now includes the city, matching what training_pipeline.py
+# actually registers in Hopsworks (e.g. aqi_forecast_model_karachi_day1).
+MODEL_REGISTRY_NAME_TEMPLATE = "aqi_forecast_model_{city_key}_{horizon_key}"
 
 TABULAR_FEATURE_COLUMNS = [
     "hour", "day", "month", "day_of_week",
@@ -71,9 +72,9 @@ def add_cyclical_hour(df):
     return df
 
 
-def load_horizon_model(project, horizon_key):
+def load_horizon_model(project, city_key, horizon_key):
     mr = project.get_model_registry()
-    registry_name = MODEL_REGISTRY_NAME_TEMPLATE.format(horizon_key=horizon_key)
+    registry_name = MODEL_REGISTRY_NAME_TEMPLATE.format(city_key=city_key, horizon_key=horizon_key)
     all_versions = mr.get_models(registry_name)
     if not all_versions:
         raise RuntimeError(f"No registered model found for '{registry_name}'.")
@@ -135,20 +136,18 @@ def get_prediction(bundle, latest_row, df_seq):
     return predict_tabular(bundle, latest_row)
 
 
-def main():
-    import hopsworks
+def process_city(project, df_all, city_key, city_info):
+    """Build the full prediction payload for one city. Raises on any failure
+    so the caller can catch it and move on without touching other cities."""
+    city_name = city_info["name"]
+    city_lat = city_info["lat"]
+    city_lon = city_info["lon"]
 
-    print(f"Connecting to Hopsworks project '{HOPSWORKS_PROJECT_NAME}'...")
-    project = hopsworks.login(
-        project=HOPSWORKS_PROJECT_NAME, host=HOPSWORKS_HOST, port=443, api_key_value=HOPSWORKS_API_KEY,
-    )
-    fs = project.get_feature_store()
-    fg = fs.get_feature_group(name=FEATURE_GROUP_NAME, version=FEATURE_GROUP_VERSION)
-
-    print(f"Loading recent data for {CITY_NAME}...")
-    df = fg.read()
-    df = df[df["city"] == CITY_NAME].sort_values("event_time").reset_index(drop=True)
+    print(f"\n=== {city_name} ===")
+    df = df_all[df_all["city"] == city_name].sort_values("event_time").reset_index(drop=True)
     print(f"  -> {len(df)} rows loaded")
+    if df.empty:
+        raise RuntimeError(f"No feature rows found for city='{city_name}' in the feature store.")
 
     df_lag = add_lag_features(df)
     df_seq = add_cyclical_hour(df)
@@ -159,8 +158,8 @@ def main():
     predictions = {}
     model_info = {}
     for horizon_key in HORIZONS:
-        print(f"Loading model + predicting for {horizon_key}...")
-        bundle = load_horizon_model(project, horizon_key)
+        print(f"  Loading model + predicting for {horizon_key}...")
+        bundle = load_horizon_model(project, city_key, horizon_key)
         predictions[horizon_key] = get_prediction(bundle, latest_row, df_seq)
         model_info[horizon_key] = {
             "model_type": bundle["model_type"], "version": bundle["version"], "r2": bundle["r2"],
@@ -186,10 +185,11 @@ def main():
     day1_val, day3_val = predictions["day1"], predictions["day3"]
     outlook_pct = ((day3_val - day1_val) / day1_val * 100) if day1_val else 0.0
 
-    output = {
-        "city": CITY_NAME,
-        "lat": CITY_LAT,
-        "lon": CITY_LON,
+    return {
+        "city": city_name,
+        "status": "ok",
+        "lat": city_lat,
+        "lon": city_lon,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "last_data_update": latest_time.isoformat(),
         "current": {
@@ -208,10 +208,49 @@ def main():
         "trend": trend_points,
     }
 
+
+def main():
+    import hopsworks
+
+    print(f"Connecting to Hopsworks project '{HOPSWORKS_PROJECT_NAME}'...")
+    project = hopsworks.login(
+        project=HOPSWORKS_PROJECT_NAME, host=HOPSWORKS_HOST, port=443, api_key_value=HOPSWORKS_API_KEY,
+    )
+    fs = project.get_feature_store()
+    fg = fs.get_feature_group(name=FEATURE_GROUP_NAME, version=FEATURE_GROUP_VERSION)
+
+    print("Loading feature data for all cities (single read, filtered per city)...")
+    df_all = fg.read()
+    print(f"  -> {len(df_all)} total rows across all cities")
+
+    output = {}
+    succeeded, failed = [], []
+
+    for city_key, city_info in CITIES.items():
+        try:
+            output[city_key] = process_city(project, df_all, city_key, city_info)
+            succeeded.append(city_key)
+            print(f"  \u2713 {city_info['name']} published successfully")
+        except Exception as e:
+            print(f"  \u2717 {city_info['name']} FAILED: {e}")
+            output[city_key] = {
+                "city": city_info["name"],
+                "status": "unavailable",
+                "error": str(e),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            failed.append(city_key)
+
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     with open(OUTPUT_PATH, "w") as f:
         json.dump(output, f, indent=2)
-    print(f"Wrote predictions to {OUTPUT_PATH}")
+
+    print(f"\nWrote predictions to {OUTPUT_PATH}")
+    print(f"Succeeded: {succeeded}")
+    print(f"Failed: {failed}")
+
+    if not succeeded:
+        raise SystemExit("All cities failed -- refusing to treat this as a successful run.")
 
 
 if __name__ == "__main__":
