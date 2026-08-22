@@ -3,9 +3,6 @@
 import { useEffect, useState } from "react";
 
 export default function LiveClock() {
-  // Start as null so the server-rendered HTML and the first client render
-  // match exactly (avoids a hydration mismatch from time passing between
-  // server render and client mount).
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {

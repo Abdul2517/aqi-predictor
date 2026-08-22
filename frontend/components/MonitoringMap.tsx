@@ -5,9 +5,6 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// A plain divIcon avoids the classic Leaflet-in-webpack broken default
-// marker icon problem (missing marker-icon.png paths) without needing to
-// copy any image assets into the project.
 const markerIcon = L.divIcon({
   className: "",
   html: `<div style="width:16px;height:16px;border-radius:50%;background:#38bdf8;border:3px solid #0a1b33;box-shadow:0 0 0 4px rgba(56,189,248,0.35);"></div>`,
@@ -56,9 +53,6 @@ export default function MonitoringMap({
         </Marker>
         <Recenter lat={lat} lon={lon} />
       </MapContainer>
-      {/* Leaflet injects tile <img> elements outside our JSX tree, so a
-          scoped styled-jsx block can't reach them -- "global" is required
-          here. Only lightens the map tiles; nothing else on the page. */}
       <style jsx global>{`
         .leaflet-tile-pane {
           filter: brightness(1.4) saturate(1.15) contrast(0.9);

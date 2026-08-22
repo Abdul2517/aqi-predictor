@@ -25,9 +25,6 @@ import {
   type PredictionsByCity,
 } from "@/lib/types";
 
-// Leaflet touches `window`/`document` at import time, so it must never be
-// part of the server-rendered bundle. ssr:false is safe here because this
-// whole file is already a Client Component.
 const MonitoringMap = dynamic(() => import("./MonitoringMap"), {
   ssr: false,
   loading: () => <div className="glass-card animate-pulse" style={{ height: 320 }} />,

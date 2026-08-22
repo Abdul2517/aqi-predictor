@@ -39,8 +39,6 @@ export default function ShapSection({
         {HORIZONS.map((h) => (
           <div key={h} className="glass-card p-4">
             <div className="eyebrow mb-2">{HORIZON_LABELS[h]}</div>
-            {/* Static pre-generated image from shap_explain.py, copied into
-                public/shap/<city>/. Not regenerated or altered here. */}
             <img
               src={`/shap/${cityKey}/shap_${h}_importance.png`}
               alt={`SHAP feature importance for ${cityName} ${HORIZON_LABELS[h]}`}

@@ -18,8 +18,6 @@ HOPSWORKS_HOST = os.getenv("HOPSWORKS_HOST", "eu-west.cloud.hopsworks.ai")
 FEATURE_GROUP_NAME = "aqi_features"
 FEATURE_GROUP_VERSION = 3
 HORIZONS = {"day1": 24, "day2": 48, "day3": 72}
-# Fixed: model name now includes the city, matching what training_pipeline.py
-# actually registers in Hopsworks (e.g. aqi_forecast_model_karachi_day1).
 MODEL_REGISTRY_NAME_TEMPLATE = "aqi_forecast_model_{city_key}_{horizon_key}"
 
 TABULAR_FEATURE_COLUMNS = [
@@ -137,8 +135,6 @@ def get_prediction(bundle, latest_row, df_seq):
 
 
 def process_city(project, df_all, city_key, city_info):
-    """Build the full prediction payload for one city. Raises on any failure
-    so the caller can catch it and move on without touching other cities."""
     city_name = city_info["name"]
     city_lat = city_info["lat"]
     city_lon = city_info["lon"]

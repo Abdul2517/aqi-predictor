@@ -60,7 +60,6 @@ export function isCityOk(data: CityData): data is PredictionsData {
   return data.status === "ok";
 }
 
-// Matches cities_config.py exactly -- do not diverge from those values.
 export type CityKey = "rawalpindi" | "islamabad" | "lahore" | "karachi";
 
 export type PredictionsByCity = Record<CityKey, CityData>;
@@ -74,9 +73,6 @@ export const CITY_LABELS: Record<CityKey, string> = {
   karachi: "Karachi",
 };
 
-// Reference coordinates -- identical to cities_config.py. Used for the map
-// even when a city's predictions.json entry is "unavailable" (which omits
-// lat/lon), so the selector and map never depend on a city having succeeded.
 export const CITY_COORDS: Record<CityKey, { lat: number; lon: number }> = {
   rawalpindi: { lat: 33.5651, lon: 73.0169 },
   islamabad: { lat: 33.6844, lon: 73.0479 },

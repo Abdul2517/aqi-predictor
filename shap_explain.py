@@ -21,8 +21,6 @@ HOPSWORKS_HOST = os.getenv("HOPSWORKS_HOST", "eu-west.cloud.hopsworks.ai")
 FEATURE_GROUP_NAME = "aqi_features"
 FEATURE_GROUP_VERSION = 3
 HORIZONS = {"day1": 24, "day2": 48, "day3": 72}
-# Same naming convention as training_pipeline.py and publish_predictions.py --
-# city is now part of the registry name.
 MODEL_REGISTRY_NAME_TEMPLATE = "aqi_forecast_model_{city_key}_{horizon_key}"
 
 TABULAR_FEATURE_COLUMNS = [
