@@ -42,4 +42,5 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add shap_output/ frontend/public/shap/
           git diff --staged --quiet || git commit -m "Update SHAP explanations after daily training"
+          git pull --rebase origin main
           git push
