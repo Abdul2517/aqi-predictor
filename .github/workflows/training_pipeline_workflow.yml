@@ -1,48 +1,45 @@
 name: Training Pipeline
-
 on:
   schedule:
     - cron: "0 2 * * *"
   workflow_dispatch: {}
-
 permissions:
   contents: write
-
 jobs:
   run-training-pipeline:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: Install dependencies
         run: pip install -r requirements.txt
-
       - name: Run training pipeline
         env:
           HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
           HOPSWORKS_PROJECT_NAME: ${{ secrets.HOPSWORKS_PROJECT_NAME }}
           HOPSWORKS_HOST: ${{ secrets.HOPSWORKS_HOST }}
         run: python training_pipeline.py
-
-      - name: Publish SHAP explanations
+      - name: Generate SHAP explanations
         env:
           HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
           HOPSWORKS_PROJECT_NAME: ${{ secrets.HOPSWORKS_PROJECT_NAME }}
           HOPSWORKS_HOST: ${{ secrets.HOPSWORKS_HOST }}
-          CITY_NAME: ${{ secrets.CITY_NAME }}
-        run: python publish_shap.py
-
+        run: python shap_explain.py
+      - name: Copy SHAP charts into frontend
+        run: |
+          mkdir -p frontend/public/shap
+          cp -r shap_output/rawalpindi frontend/public/shap/rawalpindi
+          cp -r shap_output/islamabad frontend/public/shap/islamabad
+          cp -r shap_output/lahore frontend/public/shap/lahore
+          cp -r shap_output/karachi frontend/public/shap/karachi
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add frontend/public/shap.json
-          git diff --staged --quiet || git commit -m "Update shap.json after daily training"
+          git add shap_output/ frontend/public/shap/
+          git diff --staged --quiet || git commit -m "Update SHAP explanations after daily training"
           git push
