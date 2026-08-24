@@ -4,7 +4,7 @@
     "status": "ok",
     "lat": 33.5651,
     "lon": 73.0169,
-    "generated_at": "2026-08-24T17:52:17.580078+00:00",
+    "generated_at": "2026-08-24T19:07:04.815215+00:00",
     "last_data_update": "2026-08-24T11:45:43.514986+00:00",
     "current": {
       "pm2_5": 43.19,
@@ -326,7 +326,7 @@
     "status": "ok",
     "lat": 33.6844,
     "lon": 73.0479,
-    "generated_at": "2026-08-24T17:52:33.930806+00:00",
+    "generated_at": "2026-08-24T19:07:26.436510+00:00",
     "last_data_update": "2026-08-24T11:46:06.539528+00:00",
     "current": {
       "pm2_5": 41.48,
@@ -335,7 +335,7 @@
     },
     "predictions": {
       "day1": {
-        "pm2_5": 47.85034730738171,
+        "pm2_5": 47.85034730738174,
         "category": "Unhealthy for Sensitive Groups",
         "model_type": "random_forest",
         "version": 3,
@@ -357,11 +357,11 @@
       }
     },
     "average": {
-      "pm2_5": 49.78237390736199,
+      "pm2_5": 49.782373907362,
       "category": "Unhealthy for Sensitive Groups"
     },
     "best_day": "day3",
-    "outlook_pct_3day": -2.6976265675949125,
+    "outlook_pct_3day": -2.6976265675949707,
     "pollutants": {
       "pm2_5": 41.48,
       "pm10": 71.62,
@@ -648,7 +648,7 @@
     "status": "ok",
     "lat": 31.5497,
     "lon": 74.3436,
-    "generated_at": "2026-08-24T17:52:46.758831+00:00",
+    "generated_at": "2026-08-24T19:07:46.181749+00:00",
     "last_data_update": "2026-08-24T11:46:20.646883+00:00",
     "current": {
       "pm2_5": 54.36,
@@ -970,7 +970,7 @@
     "status": "ok",
     "lat": 24.8607,
     "lon": 67.0011,
-    "generated_at": "2026-08-24T17:53:04.311708+00:00",
+    "generated_at": "2026-08-24T19:08:12.480426+00:00",
     "last_data_update": "2026-08-24T10:55:55.109765+00:00",
     "current": {
       "pm2_5": 22.44,
@@ -986,7 +986,7 @@
         "r2": 0.3428267481812872
       },
       "day2": {
-        "pm2_5": 20.8171569637137,
+        "pm2_5": 20.81715696371369,
         "category": "Moderate",
         "model_type": "random_forest",
         "version": 5,
@@ -1001,7 +1001,7 @@
       }
     },
     "average": {
-      "pm2_5": 21.72451337111363,
+      "pm2_5": 21.724513371113627,
       "category": "Moderate"
     },
     "best_day": "day2",
