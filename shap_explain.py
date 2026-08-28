@@ -1,5 +1,6 @@
 import argparse
 import os
+import time
 
 import joblib
 import matplotlib
@@ -23,6 +24,9 @@ FEATURE_GROUP_VERSION = 3
 HORIZONS = {"day1": 24, "day2": 48, "day3": 72}
 MODEL_REGISTRY_NAME_TEMPLATE = "aqi_forecast_model_{city_key}_{horizon_key}"
 
+READ_MAX_ATTEMPTS = 3
+READ_RETRY_WAIT_SECONDS = 30
+
 TABULAR_FEATURE_COLUMNS = [
     "hour", "day", "month", "day_of_week",
     "aqi", "co", "no", "no2", "o3", "so2", "pm2_5", "pm10", "nh3",
@@ -38,6 +42,20 @@ SEQ_FEATURE_COLUMNS = [
 ]
 
 OUTPUT_DIR = "shap_output"
+
+
+def read_feature_group_with_retry(fg, max_attempts=READ_MAX_ATTEMPTS, wait_seconds=READ_RETRY_WAIT_SECONDS):
+    last_exc = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return fg.read()
+        except Exception as e:
+            last_exc = e
+            print(f"  fg.read() failed (attempt {attempt}/{max_attempts}): {e}")
+            if attempt < max_attempts:
+                print(f"  Retrying in {wait_seconds}s...")
+                time.sleep(wait_seconds)
+    raise last_exc
 
 
 def add_lag_features(df):
@@ -191,8 +209,6 @@ def explain_sequence_horizon(bundle, df_seq, horizon_key, output_dir, n_backgrou
 
 
 def process_city_shap(project, df_all, city_key, city_info):
-    """Run SHAP for all 3 horizons for one city. Raises on failure so the
-    caller can catch it and move on without touching other cities."""
     city_name = city_info["name"]
     print(f"\n{'=' * 70}")
     print(f"CITY: {city_name}")
@@ -237,7 +253,7 @@ def main():
     fg = fs.get_feature_group(name=FEATURE_GROUP_NAME, version=FEATURE_GROUP_VERSION)
 
     print("Loading feature data for all cities (single read, filtered per city)...")
-    df_all = fg.read()
+    df_all = read_feature_group_with_retry(fg)
     print(f"  -> {len(df_all)} total rows across all cities")
 
     succeeded, failed = [], []

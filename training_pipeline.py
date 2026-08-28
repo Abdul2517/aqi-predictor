@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 import joblib
 import numpy as np
@@ -29,11 +30,6 @@ HORIZONS = {
 }
 N_CV_FOLDS = 5
 
-# WHY city_key is now part of the registry name: Phase 2's whole point is
-# separate models per city (Option A from our earlier discussion) -- each
-# city learns its own local patterns rather than sharing one model. This
-# template is the only place that needed to change to make every other
-# function below "just work" once city_key is threaded through.
 MODEL_REGISTRY_NAME_TEMPLATE = "aqi_forecast_model_{city_key}_{horizon_key}"
 
 FEATURE_COLUMNS = [
@@ -49,12 +45,29 @@ SOURCE_COLUMN_FOR_TARGET = "pm2_5"
 
 MAX_PLAUSIBLE_PM2_5 = 1000.0
 
-MIN_ROWS_FOR_TRAINING = (N_CV_FOLDS + 1) * 200  # same threshold as before, now checked per-city
+MIN_ROWS_FOR_TRAINING = (N_CV_FOLDS + 1) * 200
+
+READ_MAX_ATTEMPTS = 3
+READ_RETRY_WAIT_SECONDS = 30
+
+
+def read_feature_group_with_retry(fg, max_attempts=READ_MAX_ATTEMPTS, wait_seconds=READ_RETRY_WAIT_SECONDS):
+    last_exc = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return fg.read()
+        except Exception as e:
+            last_exc = e
+            print(f"  fg.read() failed (attempt {attempt}/{max_attempts}): {e}")
+            if attempt < max_attempts:
+                print(f"  Retrying in {wait_seconds}s...")
+                time.sleep(wait_seconds)
+    raise last_exc
 
 
 def load_feature_data(fs, city_name: str) -> pd.DataFrame:
     fg = fs.get_feature_group(name=FEATURE_GROUP_NAME, version=FEATURE_GROUP_VERSION)
-    df = fg.read()
+    df = read_feature_group_with_retry(fg)
     df = df[df["city"] == city_name].sort_values("event_time").reset_index(drop=True)
     return df
 
@@ -284,12 +297,6 @@ def train_city(project, fs, city_key: str, city_info: dict):
     df = load_feature_data(fs, city_name)
     print(f"  -> {len(df)} raw rows loaded")
 
-    # WHY this check exists: the 3 newly-added cities only just started
-    # collecting hourly data (Phase 1) and haven't necessarily been
-    # backfilled yet. Without this, a city with a handful of rows would
-    # either crash deep inside cross-validation or silently waste time --
-    # this gives a clear, early, per-city message instead, while letting
-    # any city that DOES have enough data (e.g. Rawalpindi) proceed normally.
     if len(df) < MIN_ROWS_FOR_TRAINING:
         print(f"  SKIPPING {city_name} entirely: only {len(df)} raw rows available, "
               f"need at least {MIN_ROWS_FOR_TRAINING} before any horizon can be trained. "
@@ -315,10 +322,6 @@ def main():
     )
     fs = project.get_feature_store()
 
-    # WHY loop over CITIES: same Phase 1 pattern -- one model SET (3
-    # horizons) per city, all reusing identical training/CV logic. Adding
-    # a 5th city to cities_config.py means it trains automatically next
-    # run, no changes needed here.
     for city_key, city_info in CITIES.items():
         train_city(project, fs, city_key, city_info)
 

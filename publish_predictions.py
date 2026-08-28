@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from datetime import datetime, timezone
 
 import joblib
@@ -19,6 +20,9 @@ FEATURE_GROUP_NAME = "aqi_features"
 FEATURE_GROUP_VERSION = 3
 HORIZONS = {"day1": 24, "day2": 48, "day3": 72}
 MODEL_REGISTRY_NAME_TEMPLATE = "aqi_forecast_model_{city_key}_{horizon_key}"
+
+READ_MAX_ATTEMPTS = 3
+READ_RETRY_WAIT_SECONDS = 30
 
 TABULAR_FEATURE_COLUMNS = [
     "hour", "day", "month", "day_of_week",
@@ -45,6 +49,20 @@ PM25_CATEGORIES = [
 ]
 
 OUTPUT_PATH = os.getenv("PREDICTIONS_OUTPUT_PATH", "frontend/public/predictions.json")
+
+
+def read_feature_group_with_retry(fg, max_attempts=READ_MAX_ATTEMPTS, wait_seconds=READ_RETRY_WAIT_SECONDS):
+    last_exc = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return fg.read()
+        except Exception as e:
+            last_exc = e
+            print(f"  fg.read() failed (attempt {attempt}/{max_attempts}): {e}")
+            if attempt < max_attempts:
+                print(f"  Retrying in {wait_seconds}s...")
+                time.sleep(wait_seconds)
+    raise last_exc
 
 
 def categorize_pm25(value):
@@ -216,7 +234,7 @@ def main():
     fg = fs.get_feature_group(name=FEATURE_GROUP_NAME, version=FEATURE_GROUP_VERSION)
 
     print("Loading feature data for all cities (single read, filtered per city)...")
-    df_all = fg.read()
+    df_all = read_feature_group_with_retry(fg)
     print(f"  -> {len(df_all)} total rows across all cities")
 
     output = {}
