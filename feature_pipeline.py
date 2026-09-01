@@ -55,17 +55,19 @@ def fetch_weather(lat: float, lon: float) -> dict:
 
 
 def get_previous_aqi(fs, city_name: str) -> float | None:
-    # WHY per-city lookup: each city needs its own change-rate baseline --
-    # comparing Lahore's new reading against Karachi's last row would be
-    # meaningless. Filtering by city_name (unchanged logic from the
-    # single-city version) already handled this correctly; it just needs
-    # to be called once per city now instead of using a fixed global city.
+    # WHY filter instead of fg.read(): fg.read() pulls the ENTIRE feature
+    # group (every city, full history -- 175k+ rows) just to find one
+    # city's last AQI value. That happens up to 4x per hourly run (once
+    # per city), which is exactly the kind of unnecessary Query Service
+    # load Hopsworks flagged. Filtering by city on the query itself keeps
+    # this to only that city's rows instead of the whole table.
     try:
         fg = fs.get_feature_group(name=FEATURE_GROUP_NAME, version=FEATURE_GROUP_VERSION)
-        df = fg.read()
-        city_df = df[df["city"] == city_name].sort_values("event_time")
+        query = fg.filter(fg.city == city_name)
+        city_df = query.read()
         if city_df.empty:
             return None
+        city_df = city_df.sort_values("event_time")
         return float(city_df.iloc[-1]["aqi"])
     except Exception:
         return None
@@ -146,18 +148,11 @@ def main():
     )
     fs = project.get_feature_store()
 
-    # WHY loop over CITIES instead of a single hardcoded city: this is the
-    # entire point of Phase 1 -- the feature pipeline now collects data for
-    # every city listed in cities_config.py, with zero per-city special
-    # casing. Adding a 5th city later means adding one dict entry there;
-    # this loop automatically picks it up with no changes here.
     errors = []
     for city_key, city_info in CITIES.items():
         try:
             run_for_city(fs, city_key, city_info)
         except Exception as e:
-            # One city's API hiccup shouldn't take down the other three --
-            # log it and keep going, then report all failures at the end.
             print(f"  FAILED for {city_info['name']}: {e}")
             errors.append(city_info["name"])
 
