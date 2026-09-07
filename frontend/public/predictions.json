@@ -4,7 +4,7 @@
     "status": "ok",
     "lat": 33.5651,
     "lon": 73.0169,
-    "generated_at": "2026-09-07T20:40:19.528471+00:00",
+    "generated_at": "2026-09-07T23:36:20.212075+00:00",
     "last_data_update": "2026-09-07T20:35:30.602725+00:00",
     "current": {
       "pm2_5": 96.16,
@@ -13,7 +13,7 @@
     },
     "predictions": {
       "day1": {
-        "pm2_5": 93.26546071815297,
+        "pm2_5": 93.26546071815298,
         "category": "Unhealthy",
         "model_type": "random_forest",
         "version": 2,
@@ -39,7 +39,7 @@
       "category": "Unhealthy"
     },
     "best_day": "day1",
-    "outlook_pct_3day": 16.44328139977475,
+    "outlook_pct_3day": 16.443281399774733,
     "pollutants": {
       "pm2_5": 96.16,
       "pm10": 145.14,
@@ -86,7 +86,7 @@
     "status": "ok",
     "lat": 33.6844,
     "lon": 73.0479,
-    "generated_at": "2026-09-07T20:40:33.077792+00:00",
+    "generated_at": "2026-09-07T23:36:36.591822+00:00",
     "last_data_update": "2026-09-07T20:35:49.690819+00:00",
     "current": {
       "pm2_5": 87.03,
@@ -95,7 +95,7 @@
     },
     "predictions": {
       "day1": {
-        "pm2_5": 54.10413720157954,
+        "pm2_5": 54.10413720157959,
         "category": "Unhealthy for Sensitive Groups",
         "model_type": "random_forest",
         "version": 2,
@@ -109,7 +109,7 @@
         "r2": 0.54145599862308
       },
       "day3": {
-        "pm2_5": 104.61925205937605,
+        "pm2_5": 104.61925205937604,
         "category": "Unhealthy",
         "model_type": "ridge",
         "version": 5,
@@ -117,11 +117,11 @@
       }
     },
     "average": {
-      "pm2_5": 101.45528563397276,
+      "pm2_5": 101.45528563397278,
       "category": "Unhealthy"
     },
     "best_day": "day1",
-    "outlook_pct_3day": 93.36645489713446,
+    "outlook_pct_3day": 93.36645489713426,
     "pollutants": {
       "pm2_5": 87.03,
       "pm10": 134.21,
@@ -168,7 +168,7 @@
     "status": "ok",
     "lat": 31.5497,
     "lon": 74.3436,
-    "generated_at": "2026-09-07T20:40:44.433052+00:00",
+    "generated_at": "2026-09-07T23:36:52.093697+00:00",
     "last_data_update": "2026-09-07T20:36:02.561458+00:00",
     "current": {
       "pm2_5": 45.46,
@@ -246,7 +246,7 @@
     "status": "ok",
     "lat": 24.8607,
     "lon": 67.0011,
-    "generated_at": "2026-09-07T20:41:01.800794+00:00",
+    "generated_at": "2026-09-07T23:37:08.239025+00:00",
     "last_data_update": "2026-09-07T10:21:53.462553+00:00",
     "current": {
       "pm2_5": 12.33,
@@ -255,14 +255,14 @@
     },
     "predictions": {
       "day1": {
-        "pm2_5": 17.92544831102887,
+        "pm2_5": 17.925448311028873,
         "category": "Moderate",
         "model_type": "random_forest",
         "version": 1,
         "r2": 0.3464586683921326
       },
       "day2": {
-        "pm2_5": 12.372624447183748,
+        "pm2_5": 12.372624447183746,
         "category": "Moderate",
         "model_type": "gradient_boosting",
         "version": 3,
@@ -281,7 +281,7 @@
       "category": "Moderate"
     },
     "best_day": "day2",
-    "outlook_pct_3day": -6.8762751277512875,
+    "outlook_pct_3day": -6.876275127751305,
     "pollutants": {
       "pm2_5": 12.33,
       "pm10": 49.22,
