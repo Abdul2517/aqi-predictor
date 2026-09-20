@@ -4,51 +4,51 @@
     "status": "ok",
     "lat": 33.5651,
     "lon": 73.0169,
-    "generated_at": "2026-09-20T06:26:18.148564+00:00",
-    "last_data_update": "2026-09-20T06:18:24.211877+00:00",
+    "generated_at": "2026-09-20T12:30:12.516907+00:00",
+    "last_data_update": "2026-09-20T11:35:07.219958+00:00",
     "current": {
-      "pm2_5": 67.93,
-      "category": "Unhealthy",
-      "trend_pct_24h": 20.871886120996447
+      "pm2_5": 44.7,
+      "category": "Unhealthy for Sensitive Groups",
+      "trend_pct_24h": -15.787490580256208
     },
     "predictions": {
       "day1": {
-        "pm2_5": 63.9529738890561,
-        "category": "Unhealthy",
+        "pm2_5": 48.13567744712319,
+        "category": "Unhealthy for Sensitive Groups",
         "model_type": "random_forest",
-        "version": 6,
-        "r2": 0.6466365924705784
+        "version": 7,
+        "r2": 0.6467610122417196
       },
       "day2": {
-        "pm2_5": 95.27384405665678,
+        "pm2_5": 83.74155282316299,
         "category": "Unhealthy",
         "model_type": "ridge",
         "version": 12,
         "r2": 0.5444393322390251
       },
       "day3": {
-        "pm2_5": 69.4788620704062,
+        "pm2_5": 60.59331747514214,
         "category": "Unhealthy",
         "model_type": "ridge",
-        "version": 18,
-        "r2": 0.5085195501789659
+        "version": 19,
+        "r2": 0.5084314541696926
       }
     },
     "average": {
-      "pm2_5": 76.2352266720397,
+      "pm2_5": 64.15684924847612,
       "category": "Unhealthy"
     },
     "best_day": "day1",
-    "outlook_pct_3day": 8.640549211888493,
+    "outlook_pct_3day": 25.880263224099437,
     "pollutants": {
-      "pm2_5": 67.93,
-      "pm10": 92.14,
-      "co": 609.04,
-      "no": 0.38,
-      "no2": 3.26,
-      "o3": 139.25,
-      "so2": 4.59,
-      "nh3": 2.86
+      "pm2_5": 44.7,
+      "pm10": 67.88,
+      "co": 379.41,
+      "no": 0.04,
+      "no2": 1.52,
+      "o3": 146.0,
+      "so2": 2.66,
+      "nh3": 0.75
     },
     "trend": [
       {
@@ -114,51 +114,51 @@
     "status": "ok",
     "lat": 33.6844,
     "lon": 73.0479,
-    "generated_at": "2026-09-20T06:26:45.443239+00:00",
-    "last_data_update": "2026-09-20T06:18:42.684096+00:00",
+    "generated_at": "2026-09-20T12:30:43.460045+00:00",
+    "last_data_update": "2026-09-20T11:35:24.620051+00:00",
     "current": {
-      "pm2_5": 62.31,
-      "category": "Unhealthy",
-      "trend_pct_24h": -17.557554908706003
+      "pm2_5": 42.81,
+      "category": "Unhealthy for Sensitive Groups",
+      "trend_pct_24h": -45.17161885245901
     },
     "predictions": {
       "day1": {
-        "pm2_5": 55.01646106715673,
+        "pm2_5": 48.02164409070255,
         "category": "Unhealthy for Sensitive Groups",
         "model_type": "random_forest",
-        "version": 7,
-        "r2": 0.6440178817618372
+        "version": 8,
+        "r2": 0.6443593450754953
       },
       "day2": {
-        "pm2_5": 97.03621735050385,
+        "pm2_5": 86.08488712776958,
         "category": "Unhealthy",
         "model_type": "ridge",
         "version": 9,
         "r2": 0.5416913293223107
       },
       "day3": {
-        "pm2_5": 67.11088761782737,
+        "pm2_5": 58.8912061696729,
         "category": "Unhealthy",
         "model_type": "ridge",
-        "version": 13,
-        "r2": 0.5047529488387511
+        "version": 14,
+        "r2": 0.5047617632446615
       }
     },
     "average": {
-      "pm2_5": 73.05452201182932,
+      "pm2_5": 64.33257912938167,
       "category": "Unhealthy"
     },
     "best_day": "day1",
-    "outlook_pct_3day": 21.983287030962213,
+    "outlook_pct_3day": 22.634714585031873,
     "pollutants": {
-      "pm2_5": 62.31,
-      "pm10": 92.42,
-      "co": 588.94,
-      "no": 0.47,
-      "no2": 3.87,
-      "o3": 131.95,
-      "so2": 3.75,
-      "nh3": 3.13
+      "pm2_5": 42.81,
+      "pm10": 68.97,
+      "co": 376.65,
+      "no": 0.05,
+      "no2": 1.83,
+      "o3": 143.1,
+      "so2": 3.08,
+      "nh3": 0.89
     },
     "trend": [
       {
@@ -220,51 +220,51 @@
     "status": "ok",
     "lat": 31.5497,
     "lon": 74.3436,
-    "generated_at": "2026-09-20T06:27:13.299672+00:00",
-    "last_data_update": "2026-09-20T06:18:55.854765+00:00",
+    "generated_at": "2026-09-20T12:31:11.497672+00:00",
+    "last_data_update": "2026-09-20T11:35:35.484676+00:00",
     "current": {
-      "pm2_5": 67.44,
-      "category": "Unhealthy",
-      "trend_pct_24h": 69.1921726041144
+      "pm2_5": 48.71,
+      "category": "Unhealthy for Sensitive Groups",
+      "trend_pct_24h": 5.273395288523877
     },
     "predictions": {
       "day1": {
-        "pm2_5": 80.8137196561812,
+        "pm2_5": 63.904653845107966,
         "category": "Unhealthy",
         "model_type": "gradient_boosting",
         "version": 5,
         "r2": 0.61485819336625
       },
       "day2": {
-        "pm2_5": 75.38654566295435,
+        "pm2_5": 60.94071231239149,
         "category": "Unhealthy",
         "model_type": "ridge",
-        "version": 13,
-        "r2": 0.508747069240451
+        "version": 14,
+        "r2": 0.5087273639438623
       },
       "day3": {
-        "pm2_5": 77.05302622753744,
+        "pm2_5": 60.86982353231666,
         "category": "Unhealthy",
         "model_type": "ridge",
-        "version": 10,
-        "r2": 0.4815943916805178
+        "version": 11,
+        "r2": 0.48160462709915935
       }
     },
     "average": {
-      "pm2_5": 77.75109718222433,
+      "pm2_5": 61.9050632299387,
       "category": "Unhealthy"
     },
-    "best_day": "day2",
-    "outlook_pct_3day": -4.653533390918627,
+    "best_day": "day3",
+    "outlook_pct_3day": -4.748997342426931,
     "pollutants": {
-      "pm2_5": 67.44,
-      "pm10": 87.5,
-      "co": 472.43,
-      "no": 0.44,
-      "no2": 2.88,
-      "o3": 96.34,
-      "so2": 5.77,
-      "nh3": 2.07
+      "pm2_5": 48.71,
+      "pm10": 65.41,
+      "co": 341.87,
+      "no": 0.08,
+      "no2": 2.36,
+      "o3": 129.75,
+      "so2": 4.79,
+      "nh3": 0.79
     },
     "trend": [
       {
@@ -322,7 +322,7 @@
     "status": "ok",
     "lat": 24.8607,
     "lon": 67.0011,
-    "generated_at": "2026-09-20T06:27:33.408055+00:00",
+    "generated_at": "2026-09-20T12:31:31.722119+00:00",
     "last_data_update": "2026-09-20T01:11:23.150458+00:00",
     "current": {
       "pm2_5": 12.57,
