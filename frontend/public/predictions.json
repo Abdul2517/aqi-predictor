@@ -4,7 +4,7 @@
     "status": "ok",
     "lat": 33.5651,
     "lon": 73.0169,
-    "generated_at": "2026-10-01T13:32:22.997173+00:00",
+    "generated_at": "2026-10-01T19:38:43.361182+00:00",
     "last_data_update": "2026-09-23T11:38:10.824114+00:00",
     "current": {
       "pm2_5": 54.73,
@@ -13,7 +13,7 @@
     },
     "predictions": {
       "day1": {
-        "pm2_5": 56.133536676860885,
+        "pm2_5": 56.133536676860935,
         "category": "Unhealthy",
         "model_type": "random_forest",
         "version": 7,
@@ -35,11 +35,11 @@
       }
     },
     "average": {
-      "pm2_5": 64.73156361347066,
+      "pm2_5": 64.73156361347067,
       "category": "Unhealthy"
     },
     "best_day": "day1",
-    "outlook_pct_3day": 1.4054275508269691,
+    "outlook_pct_3day": 1.4054275508268792,
     "pollutants": {
       "pm2_5": 54.73,
       "pm10": 92.88,
@@ -114,7 +114,7 @@
     "status": "ok",
     "lat": 33.6844,
     "lon": 73.0479,
-    "generated_at": "2026-10-01T13:32:52.762507+00:00",
+    "generated_at": "2026-10-01T19:39:12.368611+00:00",
     "last_data_update": "2026-09-23T11:38:38.850788+00:00",
     "current": {
       "pm2_5": 52.94,
@@ -137,7 +137,7 @@
         "r2": 0.5416913293223107
       },
       "day3": {
-        "pm2_5": 53.432675687104265,
+        "pm2_5": 53.43267568710429,
         "category": "Unhealthy for Sensitive Groups",
         "model_type": "ridge",
         "version": 15,
@@ -149,7 +149,7 @@
       "category": "Unhealthy"
     },
     "best_day": "day3",
-    "outlook_pct_3day": -2.864329883655118,
+    "outlook_pct_3day": -2.864329883655066,
     "pollutants": {
       "pm2_5": 52.94,
       "pm10": 92.41,
@@ -220,7 +220,7 @@
     "status": "ok",
     "lat": 31.5497,
     "lon": 74.3436,
-    "generated_at": "2026-10-01T13:33:22.500965+00:00",
+    "generated_at": "2026-10-01T19:39:39.712316+00:00",
     "last_data_update": "2026-09-23T11:38:51.420464+00:00",
     "current": {
       "pm2_5": 56.26,
@@ -326,7 +326,7 @@
     "status": "ok",
     "lat": 24.8607,
     "lon": 67.0011,
-    "generated_at": "2026-10-01T13:33:45.242388+00:00",
+    "generated_at": "2026-10-01T19:39:59.500300+00:00",
     "last_data_update": "2026-09-22T22:11:50.389796+00:00",
     "current": {
       "pm2_5": 9.69,
