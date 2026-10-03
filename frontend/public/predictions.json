@@ -4,7 +4,7 @@
     "status": "ok",
     "lat": 33.5651,
     "lon": 73.0169,
-    "generated_at": "2026-10-03T18:02:54.192908+00:00",
+    "generated_at": "2026-10-03T21:28:32.927379+00:00",
     "last_data_update": "2026-09-23T11:38:10.824114+00:00",
     "current": {
       "pm2_5": 54.73,
@@ -114,7 +114,7 @@
     "status": "ok",
     "lat": 33.6844,
     "lon": 73.0479,
-    "generated_at": "2026-10-03T18:03:22.069666+00:00",
+    "generated_at": "2026-10-03T21:29:00.778776+00:00",
     "last_data_update": "2026-09-23T11:38:38.850788+00:00",
     "current": {
       "pm2_5": 52.94,
@@ -123,7 +123,7 @@
     },
     "predictions": {
       "day1": {
-        "pm2_5": 55.00829471100049,
+        "pm2_5": 55.00829471100048,
         "category": "Unhealthy for Sensitive Groups",
         "model_type": "random_forest",
         "version": 9,
@@ -149,7 +149,7 @@
       "category": "Unhealthy"
     },
     "best_day": "day3",
-    "outlook_pct_3day": -2.8643298836550426,
+    "outlook_pct_3day": -2.86432988365503,
     "pollutants": {
       "pm2_5": 52.94,
       "pm10": 92.41,
@@ -220,7 +220,7 @@
     "status": "ok",
     "lat": 31.5497,
     "lon": 74.3436,
-    "generated_at": "2026-10-03T18:03:41.414650+00:00",
+    "generated_at": "2026-10-03T21:29:27.604156+00:00",
     "last_data_update": "2026-09-23T11:38:51.420464+00:00",
     "current": {
       "pm2_5": 56.26,
@@ -326,7 +326,7 @@
     "status": "ok",
     "lat": 24.8607,
     "lon": 67.0011,
-    "generated_at": "2026-10-03T18:03:57.743965+00:00",
+    "generated_at": "2026-10-03T21:29:48.024169+00:00",
     "last_data_update": "2026-09-22T22:11:50.389796+00:00",
     "current": {
       "pm2_5": 9.69,
@@ -335,7 +335,7 @@
     },
     "predictions": {
       "day1": {
-        "pm2_5": 10.648490652626231,
+        "pm2_5": 10.648490652626226,
         "category": "Good",
         "model_type": "random_forest",
         "version": 1,
@@ -357,11 +357,11 @@
       }
     },
     "average": {
-      "pm2_5": 11.257830945063205,
+      "pm2_5": 11.2578309450632,
       "category": "Good"
     },
     "best_day": "day2",
-    "outlook_pct_3day": 28.4804585928475,
+    "outlook_pct_3day": 28.48045859284756,
     "pollutants": {
       "pm2_5": 9.69,
       "pm10": 34.87,
