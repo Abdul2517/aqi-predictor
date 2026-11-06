@@ -4,7 +4,7 @@
     "status": "ok",
     "lat": 33.5651,
     "lon": 73.0169,
-    "generated_at": "2026-11-06T02:34:56.669407+00:00",
+    "generated_at": "2026-11-06T11:10:06.531530+00:00",
     "last_data_update": "2026-09-23T11:38:10.824114+00:00",
     "current": {
       "pm2_5": 54.73,
@@ -13,7 +13,7 @@
     },
     "predictions": {
       "day1": {
-        "pm2_5": 56.133536676860935,
+        "pm2_5": 56.133536676860885,
         "category": "Unhealthy",
         "model_type": "random_forest",
         "version": 7,
@@ -35,11 +35,11 @@
       }
     },
     "average": {
-      "pm2_5": 64.731563613472,
+      "pm2_5": 64.73156361347199,
       "category": "Unhealthy"
     },
     "best_day": "day1",
-    "outlook_pct_3day": 1.4054275508340313,
+    "outlook_pct_3day": 1.4054275508341212,
     "pollutants": {
       "pm2_5": 54.73,
       "pm10": 92.88,
@@ -111,16 +111,116 @@
   },
   "islamabad": {
     "city": "Islamabad",
-    "status": "unavailable",
-    "error": "Metadata operation error: (url: https://eu-west.cloud.hopsworks.ai/hopsworks-api/api/project/43127/dataset/download/with_auth/%2FProjects%2Fpearls_aqi_v2%2FModels%2Faqi_forecast_model_islamabad_day1%2F9%2FFiles%2Fscaler.pkl). Server response: \nHTTP code: 400, HTTP reason: Bad Request, body: b'{\"errorCode\":110021,\"usrMsg\":\"Failed to download path: /Projects/pearls_aqi_v2/Models/aqi_forecast_model_islamabad_day1/9/Files/scaler.pkl\",\"devMsg\":\"com.mysql.clusterj.ClusterJDatastoreException: Error in NdbJTie: returnCode , code 4,009, mysqlCode 157, status 3, classification 11, message No data node(s) available, check Cluster state .\\\\n\\\\tat io.hops.metadata.ndb.wrapper.HopsExceptionHelper.wrap(HopsExceptionHelper.java:48)\\\\n\\\\tat io.hops.metadata.ndb.wrapper.HopsSession.load(HopsSession.java:96)\\\\n\\\\tat io.hops.metadata.ndb.dalimpl.hdfs.INodeClusterj.getINodesPkBatched(INodeClusterj.java:566)\\\\n\\\\tat io.hops.metadata.adaptor.INodeDALAdaptor.getINodesPkBatched(INodeDALAdaptor.java:125)\\\\n\\\\tat io.hops.transaction.context.INodeContext.findBatch(INodeContext.java:439)\\\\n\\\\tat io.hops.transaction.context.INodeContext.findBatchWithLocalCacheCheck(INodeContext.java:405)\\\\n\\\\tat io.hops.transaction.context.INodeContext.findList(INodeContext.java:97)\\\\n\\\\tat io.hops.transaction.context.TransactionContext.findList(TransactionContext.java:150)\\\\n\\\\tat io.hops.transaction.EntityManager.findList(EntityManager.java:93)\\\\n\\\\tat io.hops.transaction.lock.BaseINodeLock.find(BaseINodeLock.java:302)\\\\n\\\\tat io.hops.transaction.lock.BaseINodeLock$PathResolver.readINodesWhileRespectingLocks(BaseINodeLock.java:732)\\\\n\\\\tat io.hops.transaction.lock.BaseINodeLock$PathResolver.fetchINodes(BaseINodeLock.java:510)\\\\n\\\\tat io.hops.transaction.lock.INodeLock.resolveUsingCache(INodeLock.java:191)\\\\n\\\\tat io.hops.transaction.lock.INodeLock.acquirePathsINodeLocks(INodeLock.java:158)\\\\n\\\\tat io.hops.transaction.lock.INodeLock.acquire(INodeLock.java:113)\\\\n\\\\tat io.hops.transaction.lock.HdfsTransactionalLockAcquirer.acquire(HdfsTransactionalLockAcquirer.java:32)\\\\n\\\\tat io.hops.transaction.handler.TransactionalRequestHandler.execute(TransactionalRequestHandler.java:91)\\\\n\\\\tat io.hops.transaction.handler.HopsTransactionalRequestHandler.execute(HopsTransactionalRequestHandler.java:50)\\\\n\\\\tat io.hops.transaction.handler.RequestHandler.handle(RequestHandler.java:68)\\\\n\\\\tat org.apache.hadoop.hdfs.server.namenode.FSNamesystem.getBlockLocationsWithLock(FSNamesystem.java:1183)\\\\n\\\\tat org.apache.hadoop.hdfs.server.namenode.FSNamesystem.getBlockLocations(FSNamesystem.java:1096)\\\\n\\\\tat org.apache.hadoop.hdfs.server.namenode.NameNodeRpcServer.getBlockLocations(NameNodeRpcServer.java:413)\\\\n\\\\tat org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolServerSideTranslatorPB.getBlockLocations(ClientNamenodeProtocolServerSideTranslatorPB.java:365)\\\\n\\\\tat org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos$ClientNamenodeProtocol$2.callBlockingMethod(ClientNamenodeProtocolProtos.java)\\\\n\\\\tat org.apache.hadoop.ipc.ProtobufRpcEngine2$Server$ProtoBufRpcInvoker.call(ProtobufRpcEngine2.java:621)\\\\n\\\\tat org.apache.hadoop.ipc.ProtobufRpcEngine2$Server$ProtoBufRpcInvoker.call(ProtobufRpcEngine2.java:589)\\\\n\\\\tat org.apache.hadoop.ipc.ProtobufRpcEngine2$Server$ProtoBufRpcInvoker.call(ProtobufRpcEngine2.java:573)\\\\n\\\\tat org.apache.hadoop.ipc.RPC$Server.call(RPC.java:1228)\\\\n\\\\tat org.apache.hadoop.ipc.Server$RpcCall.run(Server.java:1297)\\\\n\\\\tat org.apache.hadoop.ipc.Server$RpcCall.run(Server.java:1212)\\\\n\\\\tat java.base/java.security.AccessController.doPrivileged(AccessController.java:712)\\\\n\\\\tat java.base/javax.security.auth.Subject.doAs(Subject.java:439)\\\\n\\\\tat org.apache.hadoop.security.authentication.util.SubjectUtil.doAs(SubjectUtil.java:247)\\\\n\\\\tat org.apache.hadoop.security.UserGroupInformation.doAs(UserGroupInformation.java:2109)\\\\n\\\\tat org.apache.hadoop.ipc.Server$Handler.run(Server.java:3470)\\\\nCaused by: com.mysql.clusterj.ClusterJDatastoreException: Error in NdbJTie: returnCode , code 4,009, mysqlCode 157, status 3, classification 11, message No data node(s) available, check Cluster state .\\\\n\\\\tat com.mysql.clusterj.tie.Utility.throwError(Utility.java:1335)\\\\n\\\\tat com.mysql.clusterj.tie.DbImpl.handleError(DbImpl.java:249)\\\\n\\\\tat com.mysql.clusterj.tie.DbImpl.enlist(DbImpl.java:277)\\\\n\\\\tat com.mysql.clusterj.tie.PartitionKeyImpl.enlist(PartitionKeyImpl.java:281)\\\\n\\\\tat com.mysql.clusterj.tie.ClusterTransactionImpl.enlist(ClusterTransactionImpl.java:163)\\\\n\\\\tat com.mysql.clusterj.tie.ClusterTransactionImpl.readTuple(ClusterTransactionImpl.java:538)\\\\n\\\\tat com.mysql.clusterj.tie.NdbRecordOperationImpl.load(NdbRecordOperationImpl.java:328)\\\\n\\\\tat com.mysql.clusterj.tie.NdbRecordSmartValueHandlerImpl.load(NdbRecordSmartValueHandlerImpl.java:197)\\\\n\\\\tat com.mysql.clusterj.core.SessionImpl.load(SessionImpl.java:424)\\\\n\\\\tat io.hops.metadata.ndb.wrapper.HopsSession.load(HopsSession.java:94)\\\\n\\\\t... 33 more\\\\n\",\"errorMsg\":\"Failed to download.\"}', error code: 110021, error msg: Failed to download., user msg: Failed to download path: /Projects/pearls_aqi_v2/Models/aqi_forecast_model_islamabad_day1/9/Files/scaler.pkl",
-    "generated_at": "2026-11-06T02:35:25.952613+00:00"
+    "status": "ok",
+    "lat": 33.6844,
+    "lon": 73.0479,
+    "generated_at": "2026-11-06T11:10:36.105749+00:00",
+    "last_data_update": "2026-09-23T11:38:38.850788+00:00",
+    "current": {
+      "pm2_5": 52.94,
+      "category": "Unhealthy for Sensitive Groups",
+      "trend_pct_24h": 43.936922240348004
+    },
+    "predictions": {
+      "day1": {
+        "pm2_5": 55.00829471100053,
+        "category": "Unhealthy for Sensitive Groups",
+        "model_type": "random_forest",
+        "version": 9,
+        "r2": 0.6443150650040707
+      },
+      "day2": {
+        "pm2_5": 80.99752281247844,
+        "category": "Unhealthy",
+        "model_type": "ridge",
+        "version": 9,
+        "r2": 0.5416913293223107
+      },
+      "day3": {
+        "pm2_5": 53.432675687104265,
+        "category": "Unhealthy for Sensitive Groups",
+        "model_type": "ridge",
+        "version": 15,
+        "r2": 0.5046539805124768
+      }
+    },
+    "average": {
+      "pm2_5": 63.146164403527756,
+      "category": "Unhealthy"
+    },
+    "best_day": "day3",
+    "outlook_pct_3day": -2.864329883655118,
+    "pollutants": {
+      "pm2_5": 52.94,
+      "pm10": 92.41,
+      "co": 317.04,
+      "no": 0.06,
+      "no2": 2.4,
+      "o3": 140.1,
+      "so2": 4.12,
+      "nh3": 0.71
+    },
+    "trend": [
+      {
+        "time": "2026-09-16T16:58:01.576156+00:00",
+        "pm2_5": 48.52
+      },
+      {
+        "time": "2026-09-17T01:27:52.749788+00:00",
+        "pm2_5": 52.05
+      },
+      {
+        "time": "2026-09-17T21:27:02.348767+00:00",
+        "pm2_5": 56.02
+      },
+      {
+        "time": "2026-09-18T11:16:20.643483+00:00",
+        "pm2_5": 34.09
+      },
+      {
+        "time": "2026-09-18T21:42:57.042407+00:00",
+        "pm2_5": 47.5
+      },
+      {
+        "time": "2026-09-19T14:26:53.997665+00:00",
+        "pm2_5": 39.63
+      },
+      {
+        "time": "2026-09-19T23:07:36.205624+00:00",
+        "pm2_5": 61.5
+      },
+      {
+        "time": "2026-09-20T11:35:24.620051+00:00",
+        "pm2_5": 42.81
+      },
+      {
+        "time": "2026-09-20T21:35:15.793975+00:00",
+        "pm2_5": 52.78
+      },
+      {
+        "time": "2026-09-21T10:55:51.380959+00:00",
+        "pm2_5": 40.96
+      },
+      {
+        "time": "2026-09-22T00:09:22.420265+00:00",
+        "pm2_5": 57.92
+      },
+      {
+        "time": "2026-09-22T14:56:22.275945+00:00",
+        "pm2_5": 53.7
+      },
+      {
+        "time": "2026-09-23T00:35:09.872737+00:00",
+        "pm2_5": 72.32
+      }
+    ]
   },
   "lahore": {
     "city": "Lahore",
     "status": "ok",
     "lat": 31.5497,
     "lon": 74.3436,
-    "generated_at": "2026-11-06T02:36:09.093683+00:00",
+    "generated_at": "2026-11-06T11:11:01.956078+00:00",
     "last_data_update": "2026-09-23T11:38:51.420464+00:00",
     "current": {
       "pm2_5": 56.26,
@@ -226,7 +326,7 @@
     "status": "ok",
     "lat": 24.8607,
     "lon": 67.0011,
-    "generated_at": "2026-11-06T02:36:29.248869+00:00",
+    "generated_at": "2026-11-06T11:11:21.877784+00:00",
     "last_data_update": "2026-09-22T22:11:50.389796+00:00",
     "current": {
       "pm2_5": 9.69,
@@ -235,7 +335,7 @@
     },
     "predictions": {
       "day1": {
-        "pm2_5": 10.648490652626226,
+        "pm2_5": 10.648490652626231,
         "category": "Good",
         "model_type": "random_forest",
         "version": 1,
@@ -257,11 +357,11 @@
       }
     },
     "average": {
-      "pm2_5": 11.2578309450632,
+      "pm2_5": 11.257830945063205,
       "category": "Good"
     },
     "best_day": "day2",
-    "outlook_pct_3day": 28.48045859284756,
+    "outlook_pct_3day": 28.4804585928475,
     "pollutants": {
       "pm2_5": 9.69,
       "pm10": 34.87,
